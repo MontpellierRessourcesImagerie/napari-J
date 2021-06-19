@@ -1,10 +1,10 @@
 # napari-J
 
-[![License](https://img.shields.io/pypi/l/napari-J.svg?color=green)](https://github.com/volker-baecker/napari-J/raw/master/LICENSE)
+[![License](https://img.shields.io/pypi/l/napari-J.svg?color=green)](https://github.com/MontpellierRessourcesImagerie/napari-J/raw/master/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/napari-J.svg?color=green)](https://pypi.org/project/napari-J)
 [![Python Version](https://img.shields.io/pypi/pyversions/napari-J.svg?color=green)](https://python.org)
-[![tests](https://github.com/volker-baecker/napari-J/workflows/tests/badge.svg)](https://github.com/volker-baecker/napari-J/actions)
-[![codecov](https://codecov.io/gh/volker-baecker/napari-J/branch/master/graph/badge.svg)](https://codecov.io/gh/volker-baecker/napari-J)
+[![tests](https://github.com/MontpellierRessourcesImagerie/napari-J/workflows/tests/badge.svg)](https://github.com/volker-baecker/napari-J/actions)
+[![codecov](https://codecov.io/gh/MontpellierRessourcesImagerie/napari-J/branch/master/graph/badge.svg)](https://codecov.io/gh/MontpellierRessourcesImagerie/napari-J)
 
 A plugin to exchange data with FIJI and to use FIJI image analysis from napari
 
