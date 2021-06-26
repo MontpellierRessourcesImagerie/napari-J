@@ -1,0 +1,6 @@
+connection:
+  jvm_path: /media/baecker/DONNEES1/programs/Fiji.app/java/linux-amd64/jdk1.8.0_172/jre/lib/amd64/server/libjvm.so
+  fiji_path: /media/baecker/DONNEES1/programs/Fiji.app/
+
+
+
