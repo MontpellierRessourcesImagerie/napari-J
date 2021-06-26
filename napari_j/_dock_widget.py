@@ -1,10 +1,12 @@
 """
-This module is an example of a barebones QWidget plugin for napari
+The NapariJ-plugin connects napari and ImageJ (both ways). Napari (and python) accesses ImageJ
+via jpype. ImageJ can access napari and python via the jupyter-client.
 
-It implements the ``napari_experimental_provide_dock_widget`` hook specification.
-see: https://napari.org/docs/dev/plugins/hook_specifications.html
-
-Replace code below according to your needs.
+The plugin has the following features:
+- start FIJI 
+- get the active image (hyperstack) from FIJI with each channel being a layer in napari
+- send a snapshot from napari to FIJI
+- use FIJI to detect spots, display and filter spots in napari, send the filtered spots back to FIJI
 """
 from napari_plugin_engine import napari_hook_implementation
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QGridLayout, QFileDialog, QCheckBox
@@ -14,17 +16,49 @@ from jpype import *
 import jpype.imports
 # Pull in types
 from jpype.types import *
-import os
+import os, shutil
 from pathlib import Path
 import yaml
 import jupyter_client
 import sys
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QLineEdit, QLabel
+from PyQt5.QtWidgets import QLineEdit, QLabel, QMessageBox
+import napari
 
+class Image(QWidget):
+
+    bridge = None
+    
+    def __init__(self, napari_viewer):
+        super().__init__()
+        self.viewer = napari_viewer
+        newViewerBTN = QPushButton("New viewer")
+        newViewerBTN.clicked.connect(self._on_click_new_viewer)
+        btnGetImage = QPushButton("Get Image")
+        btnGetImage.clicked.connect(self._on_click_get_image)
+        self.setLayout(QGridLayout())
+        self.layout().addWidget(newViewerBTN, 1, 1)
+        self.layout().addWidget(btnGetImage, 2, 1)
+        
+    def _on_click_new_viewer(self):
+        self.openNewViewer()
+    	
+    def _on_click_get_image(self):
+    	self.getImage()
+    	
+    def openNewViewer(self):
+        viewer = napari.Viewer()
+        
+    def getImage(self):
+        from .bridge import Bridge
+        print("Fetching the active image from IJ")
+        if not self.bridge:
+        	self.bridge = Bridge(self.viewer)
+        self.bridge.getActiveImageFromIJ()	 
+ 
 class Connection(QWidget):
     
-    bridge = None
+    config = None
     
     def __init__(self, napari_viewer):
         super().__init__()
@@ -51,14 +85,14 @@ class Connection(QWidget):
         saveSettingsBTN = QPushButton("Save Settings")
         saveSettingsBTN.clicked.connect(self._on_save_settings_click)
         
+        makeSettingsDefaultBTN =  QPushButton("Make Default")
+        makeSettingsDefaultBTN.clicked.connect(self._on_make_settings_default)
+        
         resetSettingsBTN = QPushButton("Reset Settings")
         resetSettingsBTN.clicked.connect(self._on_reset_settings_click)
         
-        btn = QPushButton("Start FIJI")
-        btn.clicked.connect(self._on_click)
-
-        btnGetImage = QPushButton("Get Image")
-        btnGetImage.clicked.connect(self._on_click_get_image)
+        startFIJIBTN = QPushButton("Start FIJI")
+        startFIJIBTN.clicked.connect(self._on_click_start_FIJI)
         
         self.setLayout(QGridLayout())
         self.layout().addWidget(fijiPathLabel, 1, 1)
@@ -71,13 +105,17 @@ class Connection(QWidget):
 
         self.layout().addWidget(self.autostartCB, 3, 2, 3, 1)
         self.layout().addWidget(saveSettingsBTN, 4, 2, 3, 1)
-        self.layout().addWidget(resetSettingsBTN, 5, 2, 3, 1)
-        self.layout().addWidget(btn,6,2,3,1)
-        self.layout().addWidget(btnGetImage,7,2,3,1)
+        self.layout().addWidget(makeSettingsDefaultBTN, 5, 2, 3, 1)
+        self.layout().addWidget(resetSettingsBTN, 6, 2, 3, 1)
+        self.layout().addWidget(startFIJIBTN,7,2,3,1)
+        
+        if self.autostartFIJI:
+            self.startFIJI(self.fijiPath)
           
     def readConfig(self):
         with open('./naparij.yml', 'r') as file:
             params = yaml.load(file, Loader=yaml.FullLoader)
+        self.config = params
         connectionParams = params['connection']
         self.jvmPath = connectionParams['jvm_path']
         self.fijiPath = connectionParams['fiji_path']
@@ -89,28 +127,80 @@ class Connection(QWidget):
             self.fijiPath = folder + os.sep
             self.fijiPathInput.setText(self.fijiPath)
             
-    def _on_save_settings_click(self):
-    	pass
+    def _on_make_settings_default(self):
+    	self.makeSettingsDefault()	
+    	
+    def makeSettingsDefault(self):
+        try:
+            shutil.copy("./naparij.yml", "./naparij_default.yml")
+            self.showMessage("make settings default...", "The settings have been defined as default.")
+        except: 
+            self.showMessage("make settings default...", "Failed to make the settings default.")
+            
+    def resetSettings(self):
+        try:
+            shutil.copy("./naparij_default.yml", "./naparij.yml")
+            self.showMessage("reset settings...", "The settings have been reset.")
+        except: 
+            self.showMessage("reset settings...", "Failed to reset the settings.")
+            
+    def setFIJIPath(self, aPath):
+    	self.fijiPath = aPath
+    	self.fijiPathInput.setText(aPath)
+    	self.config['connection']['fiji_path'] = aPath
+    	
+    def setJVMPath(self, aPath):
+    	self.jvmPath = aPath
+    	self.jvmPathInput.setText(aPath)
+    	self.config['connection']['jvm_path'] = aPath
+    	
+    def activateAutostartFIJI(self):
+        self.autostartFIJI = True
+        self.autostartCB.setChecked(True)
+        self.config['connection']['autostart_fiji'] = True
+    	
+    def deactivateAutostartFIJI(self):
+        self.autostartFIJI = False
+        self.autostartCB.setChecked(False)
+        self.config['connection']['autostart_fiji'] = False
     
+    def _on_save_settings_click(self):
+        self.saveSettings()
+    
+    def saveSettings(self):
+        fijiPath = self.fijiPathInput.text()
+        self.setFIJIPath(fijiPath)
+        jvmPath = self.jvmPathInput.text()
+        self.setJVMPath(jvmPath)
+        autostart = self.autostartCB.isChecked()
+        if autostart:
+            self.activateAutostartFIJI()
+        else:
+            self.deactivateAutostartFIJI()
+        with open('./naparij.yml', 'w') as file:
+            yaml.dump(self.config, file)
+        self.showMessage("Settings saved...", "The settings have been saved.")        
+    
+    def showMessage(self, title, message):
+        msgBox = QMessageBox()
+        msgBox.setIcon(QMessageBox.Information)
+        msgBox.setText(message)
+        msgBox.setWindowTitle(title)
+        msgBox.setStandardButtons(QMessageBox.Ok)
+        msgBox.exec()
+                   	
     def _on_reset_settings_click(self):
-    	pass
+    	self.resetSettings()
     	
     def _on_click_browse_jvm_path(self):
         jvmFile = QFileDialog.getOpenFileName(None, 'Single File', '', '*.so *.dll')
         if jvmFile:
-            self.jvmPath = folder + os.sep
+            self.jvmPath = jvmFile[0]
             self.jvmPathInput.setText(self.jvmPath)
             
-    def _on_click(self):
+    def _on_click_start_FIJI(self):
         print("STARTING FIJI...")
-        self.startFIJI(self.fijiPath)
-
-    def _on_click_get_image(self):
-        from .bridge import Bridge
-        print("Fetching the active image from IJ")
-        if not self.bridge:
-        	self.bridge = Bridge(self.viewer)
-        self.bridge.getActiveImageFromIJ()    
+        self.startFIJI(self.fijiPath)  
         
     def start(self):
         startJVM(
@@ -138,12 +228,6 @@ class Connection(QWidget):
         self.path = aPath
         QtCore.QTimer.singleShot(200, self.start)
 
-@magic_factory
-def example_magic_widget(img_layer: "napari.layers.Image"):
-    print(f"you have selected {img_layer}")
-
-
 @napari_hook_implementation
 def napari_experimental_provide_dock_widget():
-    # you can return either a single widget, or a sequence of widgets
-    return [Connection, example_magic_widget]
+    return [Connection, Image]
