@@ -25,6 +25,28 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import QLineEdit, QLabel, QMessageBox
 import napari
 
+class Points(QWidget):
+
+    bridge = None
+
+    def __init__(self, napari_viewer):
+        super().__init__()
+        self.viewer = napari_viewer
+        getPointsBTN = QPushButton("Get Points")
+        getPointsBTN.clicked.connect(self._on_click_get_points)
+        self.setLayout(QGridLayout())
+        self.layout().addWidget(getPointsBTN, 1, 1)
+
+    def _on_click_get_points(self):
+        self.getPoints()
+        
+    def getPoints(self):
+        from .bridge import Bridge
+        print("Fetching points from IJ")
+        if not self.bridge:
+            self.bridge = Bridge(self.viewer)
+        self.bridge.displayPoints()	 
+     	  	
 class Image(QWidget):
 
     bridge = None
@@ -36,15 +58,21 @@ class Image(QWidget):
         newViewerBTN.clicked.connect(self._on_click_new_viewer)
         btnGetImage = QPushButton("Get Image")
         btnGetImage.clicked.connect(self._on_click_get_image)
+        btnScreenshot = QPushButton("Screenshot")
+        btnScreenshot.clicked.connect(self._on_click_screenshot)
         self.setLayout(QGridLayout())
         self.layout().addWidget(newViewerBTN, 1, 1)
         self.layout().addWidget(btnGetImage, 2, 1)
+        self.layout().addWidget(btnScreenshot, 3, 1)
         
     def _on_click_new_viewer(self):
         self.openNewViewer()
     	
     def _on_click_get_image(self):
     	self.getImage()
+    	
+    def _on_click_screenshot(self):
+    	self.screenshot()
     	
     def openNewViewer(self):
         viewer = napari.Viewer()
@@ -53,9 +81,16 @@ class Image(QWidget):
         from .bridge import Bridge
         print("Fetching the active image from IJ")
         if not self.bridge:
-        	self.bridge = Bridge(self.viewer)
+            self.bridge = Bridge(self.viewer)
         self.bridge.getActiveImageFromIJ()	 
  
+    def screenshot(self):
+        from .bridge import Bridge
+        print("Sending screenshot to IJ")
+        if not self.bridge:
+            self.bridge = Bridge(self.viewer)
+        self.bridge.screenshot()	 
+        
 class Connection(QWidget):
     
     config = None
@@ -230,4 +265,4 @@ class Connection(QWidget):
 
 @napari_hook_implementation
 def napari_experimental_provide_dock_widget():
-    return [Connection, Image]
+    return [Connection, Image, Points]

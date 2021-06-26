@@ -44,5 +44,32 @@ class Bridge:
                              blending='additive',
                              scale=[zFactor, 1, 1])
         self.viewer.dims.ndisplay = 3
-        
+
+    def screenshot(self):
+        screenshot = self.viewer.screenshot(canvas_only=True)
+        pixels = JInt[:](list(screenshot[:, :, 0:3].flatten()))
+        image = java.awt.image.BufferedImage(screenshot.shape[1], screenshot.shape[0], java.awt.image.BufferedImage.TYPE_3BYTE_BGR)
+        image.getRaster().setPixels(0,0,screenshot.shape[1], screenshot.shape[0], pixels)
+        title = self.viewer.layers[0].name
+        if 'C1-' in title:
+            title = title.split('C1-')[1]
+        ip = ImagePlus("screenshot of " + title, image)
+        ip.show()
+       
+    def displayPoints(self):
+        results = ResultsTable.getResultsTable()
+        cal = IJ.getImage().getCalibration()
+        headings = list(results.getColumnHeadings().split("\t"))[1:]
+        data = {}
+        for i in range(0, len(headings)):
+            data[headings[i]] = results.getColumn(i)
+        results = pd.DataFrame(data=data)
+        coords = [[z, y, x] for [x,y,z] in np.delete(results.values,[3], axis=1)]
+        zFactor = cal.getZ(1) / cal.getX(1)
+        qualities = results['V'].values / 255
+        properties = {'confidence' : qualities}
+        points_layer = self.viewer.add_points(coords,  properties=properties, 
+                                                  edge_color='confidence', 
+                                                  edge_color_cycle=['red', 'green'], 
+                                                  size=1, scale=[zFactor, 1, 1])
         
