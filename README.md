@@ -38,7 +38,7 @@ Distributed under the terms of the [MIT] license,
 
 ## Issues
 
-If you encounter any problems, please [file an issue] along with a detailed description.
+If you encounter any problems, please [file an issue](https://github.com/MontpellierRessourcesImagerie/napari-J/issues) along with a detailed description.
 
 [napari]: https://github.com/napari/napari
 [Cookiecutter]: https://github.com/audreyr/cookiecutter
