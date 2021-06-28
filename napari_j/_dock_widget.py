@@ -22,30 +22,79 @@ import yaml
 import jupyter_client
 import sys
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QLineEdit, QLabel, QMessageBox
-import napari
+from PyQt5.QtWidgets import QLineEdit, QLabel, QMessageBox, QSlider
+from PyQt5.QtCore import Qt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+import matplotlib.pyplot as plt
+import napari, copy
 
 class Points(QWidget):
 
     bridge = None
-
+    ax = None
+    threshold = 0
+    confidence = None
+    
     def __init__(self, napari_viewer):
         super().__init__()
         self.viewer = napari_viewer
         getPointsBTN = QPushButton("Get Points")
         getPointsBTN.clicked.connect(self._on_click_get_points)
+        
+        self.figure = plt.figure()
+        self.canvas = FigureCanvas(self.figure)
+        
+        slider = QSlider(Qt.Horizontal, self)
+        slider.valueChanged[int].connect(self.changeValue)
+        slider.setMinimum(0)   
+        slider.setMaximum(100)
+        slider.setValue(0)        
         self.setLayout(QGridLayout())
-        self.layout().addWidget(getPointsBTN, 1, 1)
+        self.layout().addWidget(getPointsBTN, 1, 1)                
+        self.layout().addWidget(self.canvas, 2, 1)
+        self.layout().addWidget(slider, 3, 1)
+
+    def drawHistogram(self):
+        points = self.viewer.layers.selection.active
+        self.figure.clear()
+   
+        # create an axis
+        self.ax = self.figure.add_subplot(111)
+   
+        # plot data
+        self.ax.hist(self.confidence, bins='fd')
+        self.ax.axvline(self.threshold, color='k', linestyle='dashed', linewidth=1)
+   
+        # refresh canvas
+        self.canvas.draw()
 
     def _on_click_get_points(self):
         self.getPoints()
+        self.drawHistogram()
+    
+    def changeValue(self, value):
+        self.threshold = value / 100.0
+        if not self.ax:
+            return
+        points = self.viewer.layers.selection.active
+        self.drawHistogram()
         
+        p = points.properties['confidence']
+        for i in range(0, len(p)):
+            if self.confidence[i]<self.threshold:
+                p[i] = 0
+            else:
+                p[i] = self.confidence[i]
+        points.refresh_colors() 
+            
     def getPoints(self):
         from .bridge import Bridge
         print("Fetching points from IJ")
         if not self.bridge:
             self.bridge = Bridge(self.viewer)
         self.bridge.displayPoints()	 
+        points = self.viewer.layers.selection.active
+        self.confidence = copy.deepcopy(points.properties['confidence'])
      	  	
 class Image(QWidget):
 

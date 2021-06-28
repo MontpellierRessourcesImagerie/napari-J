@@ -69,7 +69,7 @@ class Bridge:
         qualities = results['V'].values / 255
         properties = {'confidence' : qualities}
         points_layer = self.viewer.add_points(coords,  properties=properties, 
-                                                  edge_color='confidence', 
-                                                  edge_color_cycle=['red', 'green'], 
-                                                  size=1, scale=[zFactor, 1, 1])
+                                                  face_color='confidence',
+                                                  face_colormap='viridis',
+                                                  size=3, scale=[zFactor, 1, 1])
         
