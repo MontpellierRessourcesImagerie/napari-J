@@ -5,7 +5,7 @@ import numpy as np
 import napari
 import pandas as pd
 from ij.measure import ResultsTable
-from ij import IJ, ImagePlus
+from ij import IJ, ImagePlus, WindowManager
 from ij.plugin import HyperStackConverter
 
 class Bridge:
@@ -72,4 +72,18 @@ class Bridge:
                                                   face_color='confidence',
                                                   face_colormap='viridis',
                                                   size=3, scale=[zFactor, 1, 1])
-        
+                                                  
+    def pointsToIJ(self):
+        points = self.viewer.layers.selection.active
+        sel = [(coords, v) for coords,v in zip(points.data, points.properties['confidence']) if v>0]
+        rw = WindowManager.getWindow("Results")
+        rw.close(False)
+        counter = 0;
+        rt = ResultsTable(JObject(JInt(len(sel))));       
+        for row in sel:
+            rt.setValue("X", counter, row[0][2])
+            rt.setValue("Y", counter, row[0][1])
+            rt.setValue("Z", counter, row[0][0])
+            rt.setValue("V", counter, row[1])
+            counter = counter + 1
+        rt.show("Results")

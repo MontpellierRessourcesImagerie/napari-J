@@ -49,11 +49,16 @@ class Points(QWidget):
         slider.setMinimum(0)   
         slider.setMaximum(100)
         slider.setValue(0)        
+        
+        pointsToIJButton = QPushButton("Points to IJ")
+        pointsToIJButton.clicked.connect(self._on_click_pointsToIJ)
+        
         self.setLayout(QGridLayout())
         self.layout().addWidget(getPointsBTN, 1, 1)                
         self.layout().addWidget(self.canvas, 2, 1)
         self.layout().addWidget(slider, 3, 1)
-
+        self.layout().addWidget(pointsToIJButton, 4, 1)
+        
     def drawHistogram(self):
         points = self.viewer.layers.selection.active
         self.figure.clear()
@@ -71,6 +76,9 @@ class Points(QWidget):
     def _on_click_get_points(self):
         self.getPoints()
         self.drawHistogram()
+    
+    def _on_click_pointsToIJ(self):
+        self.pointsToIJ()
     
     def changeValue(self, value):
         self.threshold = value / 100.0
@@ -95,7 +103,14 @@ class Points(QWidget):
         self.bridge.displayPoints()	 
         points = self.viewer.layers.selection.active
         self.confidence = copy.deepcopy(points.properties['confidence'])
-     	  	
+     
+    def pointsToIJ(self):
+        from .bridge import Bridge
+        print("Sending points to IJ")
+        if not self.bridge:
+            self.bridge = Bridge(self.viewer)  	
+        self.bridge.pointsToIJ()    
+            
 class Image(QWidget):
 
     bridge = None
