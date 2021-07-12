@@ -84,6 +84,6 @@ class Bridge:
             rt.setValue("X", counter, row[0][2])
             rt.setValue("Y", counter, row[0][1])
             rt.setValue("Z", counter, row[0][0])
-            rt.setValue("V", counter, row[1])
+            rt.setValue("V", counter, row[1]*255)
             counter = counter + 1
         rt.show("Results")

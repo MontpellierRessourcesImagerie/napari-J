@@ -59,6 +59,15 @@ class Points(QWidget):
         self.layout().addWidget(slider, 3, 1)
         self.layout().addWidget(pointsToIJButton, 4, 1)
         
+        self.viewer.layers.selection.events.active.connect(self._on_layer_changed)
+        self.viewer.layers.events.removed.connect(self._on_remove_layer)
+        
+    def _on_layer_changed(self, event):
+        print(event.value)
+        
+    def _on_remove_layer(self, event):
+        print(event.value)
+                
     def drawHistogram(self):
         points = self.viewer.layers.selection.active
         self.figure.clear()
