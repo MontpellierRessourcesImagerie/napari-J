@@ -73,8 +73,7 @@ class Bridge:
                                                   face_colormap='viridis',
                                                   size=3, scale=[zFactor, 1, 1])
                                                   
-    def pointsToIJ(self):
-        points = self.viewer.layers.selection.active
+    def pointsToIJ(self, points):
         sel = [(coords, v) for coords,v in zip(points.data, points.properties['confidence']) if v>0]
         rw = WindowManager.getWindow("Results")
         rw.close(False)

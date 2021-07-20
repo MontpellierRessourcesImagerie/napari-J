@@ -34,6 +34,8 @@ class Points(QWidget):
     ax = None
     threshold = 0
     confidence = None
+    points = {}
+    selectedPoints = None
     
     def __init__(self, napari_viewer):
         super().__init__()
@@ -63,13 +65,22 @@ class Points(QWidget):
         self.viewer.layers.events.removed.connect(self._on_remove_layer)
         
     def _on_layer_changed(self, event):
-        print(event.value)
+        anID = id(self.viewer.layers.selection.active)
+        if anID in self.points:
+            self.confidence = self.points[anID][1]
+            self.selectedPoints = self.points[anID][0]
+        self.drawHistogram()
         
     def _on_remove_layer(self, event):
-        print(event.value)
+        anID = id(self.viewer.layers.selection.active)
+        if anID in self.points:
+            self.points.pop(anID)
+            self.confidence = None
+            self.selectedPoints = None
                 
     def drawHistogram(self):
-        points = self.viewer.layers.selection.active
+        if self.confidence is None:
+            return
         self.figure.clear()
    
         # create an axis
@@ -83,7 +94,8 @@ class Points(QWidget):
         self.canvas.draw()
 
     def _on_click_get_points(self):
-        self.getPoints()
+        self.selectedPoints, self.confidence = self.getPoints()
+        self.points[id(self.selectedPoints)] = self.selectedPoints, self.confidence
         self.drawHistogram()
     
     def _on_click_pointsToIJ(self):
@@ -93,7 +105,9 @@ class Points(QWidget):
         self.threshold = value / 100.0
         if not self.ax:
             return
-        points = self.viewer.layers.selection.active
+        points = self.selectedPoints
+        if not points:
+            return
         self.drawHistogram()
         
         p = points.properties['confidence']
@@ -112,13 +126,16 @@ class Points(QWidget):
         self.bridge.displayPoints()	 
         points = self.viewer.layers.selection.active
         self.confidence = copy.deepcopy(points.properties['confidence'])
+        return points, self.confidence
      
     def pointsToIJ(self):
         from .bridge import Bridge
+        if not self.selectedPoints:
+            return
         print("Sending points to IJ")
         if not self.bridge:
             self.bridge = Bridge(self.viewer)  	
-        self.bridge.pointsToIJ()    
+        self.bridge.pointsToIJ(self.selectedPoints)    
             
 class Image(QWidget):
 
