@@ -12,7 +12,7 @@ class Bridge:
 
     def __init__(self, viewer):
         self.viewer = viewer
-        
+
     def getActiveImageFromIJ(self):
         for c in range(0, len(self.viewer.layers)):
             self.viewer.layers.pop(0)
@@ -36,7 +36,7 @@ class Bridge:
             image2 = HyperStackConverter.toHyperStack(image, dims[2], dims[3], dims[4], "Composite");
             image.close()
             image2.show()
-        colors = ['magenta', "cyan", "yellow", "red", "green", "blue"]
+        colors = ['magenta', "cyan", "yellow", "red", "green", "blue", "orange", "brown", "white"]
         for c in range(0, dims[2]):
             self.viewer.add_image(pixels.reshape(dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, c, :, :],
                              name="C" + str(c + 1) + "-" + str(title),
@@ -55,7 +55,7 @@ class Bridge:
             title = title.split('C1-')[1]
         ip = ImagePlus("screenshot of " + title, image)
         ip.show()
-       
+
     def displayPoints(self):
         results = ResultsTable.getResultsTable()
         cal = IJ.getImage().getCalibration()
@@ -68,17 +68,17 @@ class Bridge:
         zFactor = cal.getZ(1) / cal.getX(1)
         qualities = results['V'].values / 255
         properties = {'confidence' : qualities}
-        points_layer = self.viewer.add_points(coords,  properties=properties, 
+        points_layer = self.viewer.add_points(coords,  properties=properties,
                                                   face_color='confidence',
                                                   face_colormap='viridis',
                                                   size=3, scale=[zFactor, 1, 1])
-                                                  
+
     def pointsToIJ(self, points):
         sel = [(coords, v) for coords,v in zip(points.data, points.properties['confidence']) if v>0]
         rw = WindowManager.getWindow("Results")
         rw.close(False)
         counter = 0;
-        rt = ResultsTable(JObject(JInt(len(sel))));       
+        rt = ResultsTable(JObject(JInt(len(sel))));
         for row in sel:
             rt.setValue("X", counter, row[0][2])
             rt.setValue("Y", counter, row[0][1])

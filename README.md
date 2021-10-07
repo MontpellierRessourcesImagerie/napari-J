@@ -6,7 +6,18 @@
 [![tests](https://github.com/MontpellierRessourcesImagerie/napari-J/workflows/tests/badge.svg)](https://github.com/volker-baecker/napari-J/actions)
 [![codecov](https://codecov.io/gh/MontpellierRessourcesImagerie/napari-J/branch/master/graph/badge.svg)](https://codecov.io/gh/MontpellierRessourcesImagerie/napari-J)
 
-A plugin to exchange data with FIJI and to use FIJI image analysis from napari
+A plugin to exchange data with FIJI and to use FIJI image analysis from napari.
+Current features are:
+
+ * get the active image from FIJI
+ * send a screenshot to FIJI
+ * get a set of points from the FIJI results table
+ * filter the points in napari
+ * send the filtered points back to FIJI
+ 
+Known problems:
+
+* Crashes on linux  when the file-dialog is opened. Workaround: Set the option ``Use JFileChooser to open/save`` from the ``Edit>Options>Input/Output`` menu.
 
 ----------------------------------
 
