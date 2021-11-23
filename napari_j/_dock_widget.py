@@ -3,7 +3,7 @@ The NapariJ-plugin connects napari and ImageJ (both ways). Napari (and python) a
 via jpype. ImageJ can access napari and python via the jupyter-client.
 
 The plugin has the following features:
-- start FIJI 
+- start FIJI
 - get the active image (hyperstack) from FIJI with each channel being a layer in napari
 - send a snapshot from napari to FIJI
 - use FIJI to detect spots, display and filter spots in napari, send the filtered spots back to FIJI
@@ -36,60 +36,60 @@ class Points(QWidget):
     confidence = None
     points = {}
     selectedPoints = None
-    
+
     def __init__(self, napari_viewer):
         super().__init__()
         self.viewer = napari_viewer
         getPointsBTN = QPushButton("Get Points")
         getPointsBTN.clicked.connect(self._on_click_get_points)
-        
+
         self.figure = plt.figure()
         self.canvas = FigureCanvas(self.figure)
-        
+
         slider = QSlider(Qt.Horizontal, self)
         slider.valueChanged[int].connect(self.changeValue)
-        slider.setMinimum(0)   
+        slider.setMinimum(0)
         slider.setMaximum(100)
-        slider.setValue(0)        
-        
+        slider.setValue(0)
+
         pointsToIJButton = QPushButton("Points to IJ")
         pointsToIJButton.clicked.connect(self._on_click_pointsToIJ)
-        
+
         self.setLayout(QGridLayout())
-        self.layout().addWidget(getPointsBTN, 1, 1)                
+        self.layout().addWidget(getPointsBTN, 1, 1)
         self.layout().addWidget(self.canvas, 2, 1)
         self.layout().addWidget(slider, 3, 1)
         self.layout().addWidget(pointsToIJButton, 4, 1)
-        
+
         self.viewer.layers.selection.events.active.connect(self._on_layer_changed)
         self.viewer.layers.events.removed.connect(self._on_remove_layer)
-        
+
     def _on_layer_changed(self, event):
         anID = id(self.viewer.layers.selection.active)
         if anID in self.points:
             self.confidence = self.points[anID][1]
             self.selectedPoints = self.points[anID][0]
         self.drawHistogram()
-        
+
     def _on_remove_layer(self, event):
         anID = id(self.viewer.layers.selection.active)
         if anID in self.points:
             self.points.pop(anID)
             self.confidence = None
             self.selectedPoints = None
-                
+
     def drawHistogram(self):
         if self.confidence is None:
             return
         self.figure.clear()
-   
+
         # create an axis
         self.ax = self.figure.add_subplot(111)
-   
+
         # plot data
         self.ax.hist(self.confidence, bins='fd')
         self.ax.axvline(self.threshold, color='k', linestyle='dashed', linewidth=1)
-   
+
         # refresh canvas
         self.canvas.draw()
 
@@ -97,10 +97,10 @@ class Points(QWidget):
         self.selectedPoints, self.confidence = self.getPoints()
         self.points[id(self.selectedPoints)] = self.selectedPoints, self.confidence
         self.drawHistogram()
-    
+
     def _on_click_pointsToIJ(self):
         self.pointsToIJ()
-    
+
     def changeValue(self, value):
         self.threshold = value / 100.0
         if not self.ax:
@@ -109,38 +109,38 @@ class Points(QWidget):
         if not points:
             return
         self.drawHistogram()
-        
+
         p = points.properties['confidence']
         for i in range(0, len(p)):
             if self.confidence[i]<self.threshold:
                 p[i] = 0
             else:
                 p[i] = self.confidence[i]
-        points.refresh_colors() 
-            
+        points.refresh_colors()
+
     def getPoints(self):
         from .bridge import Bridge
         print("Fetching points from IJ")
         if not self.bridge:
             self.bridge = Bridge(self.viewer)
-        self.bridge.displayPoints()	 
+        self.bridge.displayPoints()
         points = self.viewer.layers.selection.active
         self.confidence = copy.deepcopy(points.properties['confidence'])
         return points, self.confidence
-     
+
     def pointsToIJ(self):
         from .bridge import Bridge
         if not self.selectedPoints:
             return
         print("Sending points to IJ")
         if not self.bridge:
-            self.bridge = Bridge(self.viewer)  	
-        self.bridge.pointsToIJ(self.selectedPoints)    
-            
+            self.bridge = Bridge(self.viewer)
+        self.bridge.pointsToIJ(self.selectedPoints)
+
 class Image(QWidget):
 
     bridge = None
-    
+
     def __init__(self, napari_viewer):
         super().__init__()
         self.viewer = napari_viewer
@@ -154,39 +154,40 @@ class Image(QWidget):
         self.layout().addWidget(newViewerBTN, 1, 1)
         self.layout().addWidget(btnGetImage, 2, 1)
         self.layout().addWidget(btnScreenshot, 3, 1)
-        
+
     def _on_click_new_viewer(self):
         self.openNewViewer()
-    	
+
     def _on_click_get_image(self):
     	self.getImage()
-    	
+
     def _on_click_screenshot(self):
     	self.screenshot()
-    	
+
     def openNewViewer(self):
         viewer = napari.Viewer()
-        
+
     def getImage(self):
         from .bridge import Bridge
         print("Fetching the active image from IJ")
         if not self.bridge:
             self.bridge = Bridge(self.viewer)
-        self.bridge.getActiveImageFromIJ()	 
- 
+        self.bridge.getActiveImageFromIJ()
+
     def screenshot(self):
         from .bridge import Bridge
         print("Sending screenshot to IJ")
         if not self.bridge:
             self.bridge = Bridge(self.viewer)
-        self.bridge.screenshot()	 
-        
+        self.bridge.screenshot()
+
 class Connection(QWidget):
-    
+
     config = None
-    
+    home = None
     def __init__(self, napari_viewer):
         super().__init__()
+        self.home = os.getcwd()
         self.readConfig()
         self.viewer = napari_viewer
 
@@ -196,29 +197,29 @@ class Connection(QWidget):
         self.fijiPathInput.setText(self.fijiPath)
         btnBrowseFIJIPath = QPushButton("Browse...")
         btnBrowseFIJIPath.clicked.connect(self._on_click_browse_fiji_path)
-	
+
         jvmPathLabel = QLabel(self)
         jvmPathLabel.setText("jvm: ")
         self.jvmPathInput = QLineEdit(self)
         self.jvmPathInput.setText(self.jvmPath)
         btnBrowseJVMPath = QPushButton("Browse...")
         btnBrowseJVMPath.clicked.connect(self._on_click_browse_jvm_path)
-        
+
         self.autostartCB = QCheckBox("automatically start FIJI")
         self.autostartCB.setChecked(self.autostartFIJI)
-        
+
         saveSettingsBTN = QPushButton("Save Settings")
         saveSettingsBTN.clicked.connect(self._on_save_settings_click)
-        
+
         makeSettingsDefaultBTN =  QPushButton("Make Default")
         makeSettingsDefaultBTN.clicked.connect(self._on_make_settings_default)
-        
+
         resetSettingsBTN = QPushButton("Reset Settings")
         resetSettingsBTN.clicked.connect(self._on_reset_settings_click)
-        
+
         startFIJIBTN = QPushButton("Start FIJI")
         startFIJIBTN.clicked.connect(self._on_click_start_FIJI)
-        
+
         self.setLayout(QGridLayout())
         self.layout().addWidget(fijiPathLabel, 1, 1)
         self.layout().addWidget(self.fijiPathInput, 1, 2)
@@ -233,10 +234,10 @@ class Connection(QWidget):
         self.layout().addWidget(makeSettingsDefaultBTN, 5, 2, 3, 1)
         self.layout().addWidget(resetSettingsBTN, 6, 2, 3, 1)
         self.layout().addWidget(startFIJIBTN,7,2,3,1)
-        
+
         if self.autostartFIJI:
             self.startFIJI(self.fijiPath)
-          
+
     def readConfig(self):
         with open('./naparij.yml', 'r') as file:
             params = yaml.load(file, Loader=yaml.FullLoader)
@@ -245,53 +246,53 @@ class Connection(QWidget):
         self.jvmPath = connectionParams['jvm_path']
         self.fijiPath = connectionParams['fiji_path']
         self.autostartFIJI = connectionParams['autostart_fiji']
-    	
+
     def _on_click_browse_fiji_path(self):
-        folder = QFileDialog.getExistingDirectory() 
+        folder = QFileDialog.getExistingDirectory()
         if folder:
             self.fijiPath = folder + os.sep
             self.fijiPathInput.setText(self.fijiPath)
-            
+
     def _on_make_settings_default(self):
-    	self.makeSettingsDefault()	
-    	
+    	self.makeSettingsDefault()
+
     def makeSettingsDefault(self):
         try:
             shutil.copy("./naparij.yml", "./naparij_default.yml")
             self.showMessage("make settings default...", "The settings have been defined as default.")
-        except: 
+        except:
             self.showMessage("make settings default...", "Failed to make the settings default.")
-            
+
     def resetSettings(self):
         try:
             shutil.copy("./naparij_default.yml", "./naparij.yml")
             self.showMessage("reset settings...", "The settings have been reset.")
-        except: 
+        except:
             self.showMessage("reset settings...", "Failed to reset the settings.")
-            
+
     def setFIJIPath(self, aPath):
     	self.fijiPath = aPath
     	self.fijiPathInput.setText(aPath)
     	self.config['connection']['fiji_path'] = aPath
-    	
+
     def setJVMPath(self, aPath):
     	self.jvmPath = aPath
     	self.jvmPathInput.setText(aPath)
     	self.config['connection']['jvm_path'] = aPath
-    	
+
     def activateAutostartFIJI(self):
         self.autostartFIJI = True
         self.autostartCB.setChecked(True)
         self.config['connection']['autostart_fiji'] = True
-    	
+
     def deactivateAutostartFIJI(self):
         self.autostartFIJI = False
         self.autostartCB.setChecked(False)
         self.config['connection']['autostart_fiji'] = False
-    
+
     def _on_save_settings_click(self):
         self.saveSettings()
-    
+
     def saveSettings(self):
         fijiPath = self.fijiPathInput.text()
         self.setFIJIPath(fijiPath)
@@ -304,8 +305,8 @@ class Connection(QWidget):
             self.deactivateAutostartFIJI()
         with open('./naparij.yml', 'w') as file:
             yaml.dump(self.config, file)
-        self.showMessage("Settings saved...", "The settings have been saved.")        
-    
+        self.showMessage("Settings saved...", "The settings have been saved.")
+
     def showMessage(self, title, message):
         msgBox = QMessageBox()
         msgBox.setIcon(QMessageBox.Information)
@@ -313,20 +314,20 @@ class Connection(QWidget):
         msgBox.setWindowTitle(title)
         msgBox.setStandardButtons(QMessageBox.Ok)
         msgBox.exec()
-                   	
+
     def _on_reset_settings_click(self):
     	self.resetSettings()
-    	
+
     def _on_click_browse_jvm_path(self):
         jvmFile = QFileDialog.getOpenFileName(None, 'Single File', '', '*.so *.dll')
         if jvmFile:
             self.jvmPath = jvmFile[0]
             self.jvmPathInput.setText(self.jvmPath)
-            
+
     def _on_click_start_FIJI(self):
         print("STARTING FIJI...")
-        self.startFIJI(self.fijiPath)  
-        
+        self.startFIJI(self.fijiPath)
+
     def start(self):
         startJVM(
             self.jvmPath,
