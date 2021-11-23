@@ -7,8 +7,16 @@ import pandas as pd
 from ij.measure import ResultsTable
 from ij import IJ, ImagePlus, WindowManager
 from ij.plugin import HyperStackConverter
+from napari.utils.colormaps import * 
+from napari.utils.colormaps.colormap_utils import * 
+from vispy.color import Colormap, get_colormap
+
+from os import listdir
+from os.path import isfile, join
+import yaml
 
 class Bridge:
+    colors = ['magenta', 'cyan', 'yellow', 'red', 'green', 'blue', 'orange', 'brown', 'white']
 
     def __init__(self, viewer):
         self.viewer = viewer
@@ -36,7 +44,7 @@ class Bridge:
             image2 = HyperStackConverter.toHyperStack(image, dims[2], dims[3], dims[4], "Composite");
             image.close()
             image2.show()
-        colors = ['magenta', "cyan", "yellow", "red", "green", "blue", "orange", "brown", "white"]
+        colors = self.colors
         for c in range(0, dims[2]):
             self.viewer.add_image(pixels.reshape(dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, c, :, :],
                              name="C" + str(c + 1) + "-" + str(title),
@@ -56,8 +64,8 @@ class Bridge:
         ip = ImagePlus("screenshot of " + title, image)
         ip.show()
 
-    def displayPoints(self):
-        results = ResultsTable.getResultsTable()
+    def displayPoints(self,inColormap='inferno'):
+        results = ResultsTable.getResultsTable() #getResultsTable('title') should work
         cal = IJ.getImage().getCalibration()
         headings = list(results.getColumnHeadings().split("\t"))[1:]
         data = {}
@@ -68,10 +76,58 @@ class Bridge:
         zFactor = cal.getZ(1) / cal.getX(1)
         qualities = results['V'].values / 255
         properties = {'confidence' : qualities}
+        colormap = self.cropColormap(inColormap)
         points_layer = self.viewer.add_points(coords,  properties=properties,
                                                   face_color='confidence',
-                                                  face_colormap='viridis',
+                                                  face_colormap=colormap,
+                                                  face_contrast_limits=(0.0,1.0),
                                                   size=3, scale=[zFactor, 1, 1])
+
+
+    def getPairs(self):
+        results = ResultsTable.getResultsTable()
+        cal = IJ.getImage().getCalibration()
+        headings = list(results.getColumnHeadings().split("\t"))[1:]
+        data = {}
+        for i in range(0, len(headings)):
+            data[headings[i]] = results.getColumn(i)
+        results = pd.DataFrame(data=data)
+        zFactor = cal.getZ(1) / cal.getX(1)
+        
+        coordsA = [[z, y, x] for [x,y,z] in np.delete(results.values,[3,4,5,6], axis=1)]
+        # 
+        # qualities = results['Dist'].values / 255
+        # properties = {'confidence' : qualities}
+        # colormap = self.cropColormap('inferno')
+        # points_layer = self.viewer.add_points(coordsA,  properties=properties,
+        #                                           face_color='confidence',
+        #                                           face_colormap=colormap,
+        #                                           face_contrast_limits=(0.0,1.0),
+        #                                           size=3, scale=[zFactor, 1, 1])
+
+        coordsB = [[z, y, x] for [x,y,z] in np.delete(results.values,[0,1,2,6], axis=1)]
+        #
+        # qualities = results['Dist'].values / 255
+        # properties = {'confidence' : qualities}
+        # colormap = self.cropColormap('viridis')
+        # points_layer = self.viewer.add_points(coordsB,  properties=properties,
+        #                                           face_color='confidence',
+        #                                           face_colormap=colormap,
+        #                                           face_contrast_limits=(0.0,1.0),
+        #                                           size=3, scale=[zFactor, 1, 1])
+        lines = []
+        for i in range(len(coordsA)):
+            lines.append([coordsA[i],coordsB[i]])
+        self.viewer.add_shapes(lines, shape_type='line', scale=[zFactor, 1, 1])
+
+    def cropColormap(self,colorMapName):
+        #Get colorMap values
+        cm = get_colormap(colorMapName)
+        for i in range(256):
+            cm.colors.rgba[i]=cm.colors.rgba[int(i/2)+128]
+            if i==0:
+                cm.colors.rgba[0]=[0.0,0.0,0.0,1.0]
+        return convert_vispy_colormap(cm, name=colorMapName)
 
     def pointsToIJ(self, points):
         sel = [(coords, v) for coords,v in zip(points.data, points.properties['confidence']) if v>0]
@@ -86,3 +142,77 @@ class Bridge:
             rt.setValue("V", counter, row[1]*255)
             counter = counter + 1
         rt.show("Results")
+
+    def saveAllLayers(self,directoryName):
+        savePath = directoryName
+        layerList = self.viewer.layers
+
+        layersArray = []
+        for i in range(len(layerList)):
+            currentLayer = layerList[i]
+            name = currentLayer.name
+            type_ = str(type(currentLayer))
+            print(type_)
+            if(type_.find('image')>-1):
+                scale = currentLayer.scale
+                type_ = 'image'
+                filename = name + ".tif"
+                colormap = currentLayer.colormap.name
+            else:
+                if(type_.find('points')>-1):
+                    type_ = 'points'
+                else:
+                    type_ = 'shapes'
+                filename = name + ".csv"
+                colormap = currentLayer.face_colormap.name
+
+            layersArray.append({'name':name,'filename':filename,'type':type_,'colormap':colormap})
+            
+        layersPart = {'layers':layersArray}
+        
+        print(scale[1])
+        print(type(scale[1]))
+        zFactor = float(scale[1])
+
+        calibrationPart = {'calibration':{'x':1,'y':1,'z':zFactor}}
+        #configDict = [{calibrationPart},{layersPart}]
+        #configDict = calibrationPart+layersPart
+        with open(join(savePath, "config.yml"), 'w+') as file:
+            yaml.dump(calibrationPart, file, sort_keys=False)
+            yaml.dump(layersPart, file, sort_keys=False)
+
+        layerList.save(savePath)
+
+    def loadAllLayers(self,directoryName):
+        colorID = 0
+
+        currentDirectory = str(directoryName).replace("\\", "/").replace("//", "/")
+        configFile = ""
+
+        for f in listdir(currentDirectory):
+            if isfile(join(currentDirectory, f)) and f.endswith(".yml"):
+                configFile = join(currentDirectory, f)
+
+        with open(configFile, 'r') as file:
+            configs = yaml.load(file, Loader=yaml.FullLoader)
+            #Calibration:
+            x=configs['calibration']['x']
+            y=configs['calibration']['y']
+            z=configs['calibration']['z']
+            zFactor = z / x
+            for parameter in configs['layers']:
+                name = parameter['name']
+                filename = parameter['filename']
+                type = parameter['type']
+                colormap =parameter['colormap']
+                if(type == 'image'):
+                    self.viewer.open(join(currentDirectory, filename),layer_type=type,name=name,colormap=colormap,scale=[zFactor, 1, 1],blending='additive')
+                if(type == 'points'):
+                    pointsCsv = pd.read_csv(join(currentDirectory, filename))
+                    qualities = pointsCsv['confidence'].values
+                    properties = {'confidence' : qualities}
+                    croppedColormap = self.cropColormap(colormap)
+                    self.viewer.open(join(currentDirectory, filename),layer_type=type,name=name,face_colormap=croppedColormap,scale=[zFactor, 1, 1],size=3,properties=properties,face_color='confidence',face_contrast_limits=(0.0,1.0))
+                if(type == 'shapes'):
+                    self.viewer.open(join(currentDirectory, filename),layer_type=type,name=name,face_colormap=colormap,scale=[zFactor, 1, 1])
+                
