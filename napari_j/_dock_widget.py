@@ -27,40 +27,56 @@ from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 import napari, copy
+import numpy as np
 
 class Points(QWidget):
 
     bridge = None
     ax = None
-    threshold = 0
+    thresholdMin = 0
+    thresholdMax = 0
     confidence = None
     points = {}
     selectedPoints = None
+    colormapID = 0
 
+    
     def __init__(self, napari_viewer):
         super().__init__()
         self.viewer = napari_viewer
-        getPointsBTN = QPushButton("Get Points")
-        getPointsBTN.clicked.connect(self._on_click_get_points)
-
+        btnGetPoints = QPushButton("Get Points")
+        btnGetPoints.clicked.connect(self._on_click_get_points)
+        
         self.figure = plt.figure()
         self.canvas = FigureCanvas(self.figure)
+        
+        sliderMin = QSlider(Qt.Horizontal, self)
+        sliderMin.valueChanged[int].connect(self.changeValueMin)
+        sliderMin.setMinimum(0)   
+        sliderMin.setMaximum(100)
+        sliderMin.setValue(0)
 
-        slider = QSlider(Qt.Horizontal, self)
-        slider.valueChanged[int].connect(self.changeValue)
-        slider.setMinimum(0)
-        slider.setMaximum(100)
-        slider.setValue(0)
-
-        pointsToIJButton = QPushButton("Points to IJ")
-        pointsToIJButton.clicked.connect(self._on_click_pointsToIJ)
-
+        sliderMax = QSlider(Qt.Horizontal, self)
+        sliderMax.valueChanged[int].connect(self.changeValueMax)
+        sliderMax.setMinimum(0)   
+        sliderMax.setMaximum(100)
+        sliderMax.setValue(100)
+        changeColormapButton = QPushButton("Change Colormap")
+        changeColormapButton.clicked.connect(self._on_click_changeColormap)
+        btnPointsToIJ = QPushButton("Points to IJ")
+        btnPointsToIJ.clicked.connect(self._on_click_pointsToIJ)
+        btnGetLines = QPushButton("Get Lines")
+        btnGetLines.clicked.connect(self._on_click_getLines)
+        
         self.setLayout(QGridLayout())
-        self.layout().addWidget(getPointsBTN, 1, 1)
-        self.layout().addWidget(self.canvas, 2, 1)
-        self.layout().addWidget(slider, 3, 1)
-        self.layout().addWidget(pointsToIJButton, 4, 1)
-
+        self.layout().addWidget(btnGetPoints        , 1, 1, 1, -1)
+        self.layout().addWidget(self.canvas         , 2, 1, 1, -1)
+        self.layout().addWidget(sliderMin           , 3, 1, 1, -1)
+        self.layout().addWidget(sliderMax           , 4, 1, 1, -1)
+        self.layout().addWidget(changeColormapButton, 5, 1, 1, -1)
+        self.layout().addWidget(btnPointsToIJ       , 6, 1, 1, -1)
+        self.layout().addWidget(btnGetLines         , 7, 1, 1, -1)
+        
         self.viewer.layers.selection.events.active.connect(self._on_layer_changed)
         self.viewer.layers.events.removed.connect(self._on_remove_layer)
 
@@ -69,8 +85,16 @@ class Points(QWidget):
         if anID in self.points:
             self.confidence = self.points[anID][1]
             self.selectedPoints = self.points[anID][0]
-        self.drawHistogram()
+        else:
+            points = self.getSelectedLayer()
+            if not points:
+                return
+            self.confidence = copy.deepcopy(points.properties['confidence'])
+            self.points[anID] = points, self.confidence
+            self.selectedPoints = self.points[anID][0]
 
+        self.drawHistogram()
+        
     def _on_remove_layer(self, event):
         anID = id(self.viewer.layers.selection.active)
         if anID in self.points:
@@ -79,17 +103,21 @@ class Points(QWidget):
             self.selectedPoints = None
 
     def drawHistogram(self):
+        print("Drawing Histogram...")
         if self.confidence is None:
             return
         self.figure.clear()
 
         # create an axis
         self.ax = self.figure.add_subplot(111)
+        
+        range = (0,1)
 
         # plot data
-        self.ax.hist(self.confidence, bins='fd')
-        self.ax.axvline(self.threshold, color='k', linestyle='dashed', linewidth=1)
-
+        self.ax.hist(self.confidence, bins='fd', range=range)
+        self.ax.axvline(self.thresholdMin, color='k', linestyle='dashed', linewidth=1)
+        self.ax.axvline(self.thresholdMax, color='k', linestyle='dashed', linewidth=1)
+   
         # refresh canvas
         self.canvas.draw()
 
@@ -101,35 +129,73 @@ class Points(QWidget):
     def _on_click_pointsToIJ(self):
         self.pointsToIJ()
 
-    def changeValue(self, value):
-        self.threshold = value / 100.0
+    def _on_click_changeColormap(self):
+        self.changeColormap()
+
+    def _on_click_getLines(self):
+        self.checkBridge()
+        print("Fetching pairs from IJ")
+        self.bridge.getPairs()
+
+    
+    def changeValueMin(self, value):
+        self.thresholdMin = value / 100.0
         if not self.ax:
             return
         points = self.selectedPoints
         if not points:
             return
         self.drawHistogram()
-
+        
         p = points.properties['confidence']
         for i in range(0, len(p)):
-            if self.confidence[i]<self.threshold:
+            if self.confidence[i]<self.thresholdMin:
                 p[i] = 0
             else:
                 p[i] = self.confidence[i]
-        points.refresh_colors()
+        points.refresh_colors() 
 
+    def changeValueMax(self, value):
+        self.thresholdMax = value / 100.0
+        if not self.ax:
+            return
+        points = self.selectedPoints
+        if not points:
+            return
+        self.drawHistogram()
+        
+        p = points.properties['confidence']
+        for i in range(0, len(p)):
+            if self.confidence[i]>self.thresholdMax:
+                p[i] = 0
+            else:
+                p[i] = self.confidence[i]
+        points.refresh_colors() 
+            
     def getPoints(self):
-        from .bridge import Bridge
+        self.checkBridge()
         print("Fetching points from IJ")
         if not self.bridge:
             self.bridge = Bridge(self.viewer)
         self.bridge.displayPoints()
-        points = self.viewer.layers.selection.active
+        points = self.getSelectedLayer()
+        if not points:
+            return
         self.confidence = copy.deepcopy(points.properties['confidence'])
         return points, self.confidence
 
+    def changeColormap(self):
+        self.checkBridge()
+        colormaps = ['viridis','cividis','inferno']
+        points = self.getSelectedLayer()
+        if not points:
+            return
+        points.face_colormap=self.bridge.cropColormap(colormaps[self.colormapID])
+        self.colormapID=(self.colormapID+1)%len(colormaps)
+        points.refresh_colors() 
+
     def pointsToIJ(self):
-        from .bridge import Bridge
+        self.checkBridge()
         if not self.selectedPoints:
             return
         print("Sending points to IJ")
@@ -137,52 +203,135 @@ class Points(QWidget):
             self.bridge = Bridge(self.viewer)
         self.bridge.pointsToIJ(self.selectedPoints)
 
+    def checkBridge(self):
+        from .bridge import Bridge
+        if not self.bridge:
+            self.bridge = Bridge(self.viewer)
+
+    def getSelectedLayer(self):
+        points = self.viewer.layers.selection.active
+        print(type(points))
+        print(str(type(points)))
+        if str(type(points))=="<class 'napari.layers.points.points.Points'>":
+            print("I'm on it")
+            return points
+        return None
+
 class Image(QWidget):
 
     bridge = None
+    loadPath = None
+    loadInput = None
 
+    savePath = None
+    saveInput = None
+
+    
     def __init__(self, napari_viewer):
         super().__init__()
         self.viewer = napari_viewer
-        newViewerBTN = QPushButton("New viewer")
-        newViewerBTN.clicked.connect(self._on_click_new_viewer)
+        btnNewViewer = QPushButton("New viewer")
+        btnNewViewer.clicked.connect(self._on_click_new_viewer)
         btnGetImage = QPushButton("Get Image")
         btnGetImage.clicked.connect(self._on_click_get_image)
         btnScreenshot = QPushButton("Screenshot")
         btnScreenshot.clicked.connect(self._on_click_screenshot)
-        self.setLayout(QGridLayout())
-        self.layout().addWidget(newViewerBTN, 1, 1)
-        self.layout().addWidget(btnGetImage, 2, 1)
-        self.layout().addWidget(btnScreenshot, 3, 1)
 
+        loadLabel = QLabel(self)
+        loadLabel.setText("Loading Files from a Folder :")
+        self.loadInput = QLineEdit(self)
+        self.loadInput.setText(self.loadPath)
+        btnBrowseload = QPushButton("Browse...")
+        btnBrowseload.clicked.connect(self._on_click_browse_load)
+        btnLoad = QPushButton("Load")
+        btnLoad.clicked.connect(self._on_click_load)
+
+        saveLabel = QLabel(self)
+        saveLabel.setText("Save Layers to a Folder :")
+        self.saveInput = QLineEdit(self)
+        self.saveInput.setText(self.savePath)
+        btnBrowseSave = QPushButton("Browse...")
+        btnBrowseSave.clicked.connect(self._on_click_browse_save)
+        btnSave = QPushButton("Save")
+        btnSave.clicked.connect(self._on_click_save)
+
+        self.setLayout(QGridLayout())
+        self.layout().addWidget(btnNewViewer    , 1, 1, 1, -1)
+        self.layout().addWidget(btnGetImage     , 2, 1, 1, -1)
+        self.layout().addWidget(btnScreenshot   , 3, 1, 1, -1)
+
+        self.layout().addWidget(loadLabel       , 4, 1, 1, 2)
+        self.layout().addWidget(self.loadInput  , 5, 1)
+        self.layout().addWidget(btnBrowseload   , 5, 2)
+        self.layout().addWidget(btnLoad         , 6, 1, 1, 2)
+
+        self.layout().addWidget(saveLabel       , 7, 1, 1, 2)
+        self.layout().addWidget(self.saveInput  , 8, 1)
+        self.layout().addWidget(btnBrowseSave   , 8, 2)
+        self.layout().addWidget(btnSave         , 9, 1, 1, 2)
+
+
+    def _on_click_browse_load(self):
+        folder = QFileDialog.getExistingDirectory() 
+        if folder:
+            self.loadPath = folder + os.sep
+            self.loadInput.setText(self.loadPath) 
+    
+    def _on_click_browse_save(self):
+        folder = QFileDialog.getExistingDirectory() 
+        if folder:
+            self.savePath = folder + os.sep
+            self.saveInput.setText(self.savePath)
+        
     def _on_click_new_viewer(self):
         self.openNewViewer()
-
+    	
     def _on_click_get_image(self):
     	self.getImage()
 
     def _on_click_screenshot(self):
     	self.screenshot()
 
+    def _on_click_load(self):
+        self.loadFromFolders()
+
+    def _on_click_save(self):
+        self.saveLayers()
+    	
     def openNewViewer(self):
         viewer = napari.Viewer()
 
     def getImage(self):
         from .bridge import Bridge
-        print("Fetching the active image from IJ")
         if not self.bridge:
             self.bridge = Bridge(self.viewer)
-        self.bridge.getActiveImageFromIJ()
-
+        print("Fetching the active image from IJ")
+        self.bridge.getActiveImageFromIJ()	 
+ 
     def screenshot(self):
         from .bridge import Bridge
-        print("Sending screenshot to IJ")
         if not self.bridge:
             self.bridge = Bridge(self.viewer)
-        self.bridge.screenshot()
+        print("Sending screenshot to IJ")
+        self.bridge.screenshot()	 
 
+    def loadFromFolders(self):
+        from .bridge import Bridge
+        if not self.bridge:
+            self.bridge = Bridge(self.viewer)
+        print("Loading Files from folder")
+        self.bridge.loadAllLayers(self.loadPath)
+
+    def saveLayers(self):
+        from .bridge import Bridge
+        if not self.bridge:
+            self.bridge = Bridge(self.viewer)
+        print("Saving each layer")
+        self.bridge.saveAllLayers(self.savePath)     
+
+        
 class Connection(QWidget):
-
+    
     config = None
     home = None
     def __init__(self, napari_viewer):
@@ -221,20 +370,20 @@ class Connection(QWidget):
         startFIJIBTN.clicked.connect(self._on_click_start_FIJI)
 
         self.setLayout(QGridLayout())
-        self.layout().addWidget(fijiPathLabel, 1, 1)
-        self.layout().addWidget(self.fijiPathInput, 1, 2)
-        self.layout().addWidget(btnBrowseFIJIPath, 1, 3)
+        self.layout().addWidget(fijiPathLabel       , 1, 1)
+        self.layout().addWidget(self.fijiPathInput  , 1, 2)
+        self.layout().addWidget(btnBrowseFIJIPath   , 1, 3)
 
-        self.layout().addWidget(jvmPathLabel, 2, 1)
-        self.layout().addWidget(self.jvmPathInput, 2, 2)
-        self.layout().addWidget(btnBrowseJVMPath, 2, 3)
+        self.layout().addWidget(jvmPathLabel        , 2, 1)
+        self.layout().addWidget(self.jvmPathInput   , 2, 2)
+        self.layout().addWidget(btnBrowseJVMPath    , 2, 3)
 
-        self.layout().addWidget(self.autostartCB, 3, 2, 3, 1)
-        self.layout().addWidget(saveSettingsBTN, 4, 2, 3, 1)
-        self.layout().addWidget(makeSettingsDefaultBTN, 5, 2, 3, 1)
-        self.layout().addWidget(resetSettingsBTN, 6, 2, 3, 1)
-        self.layout().addWidget(startFIJIBTN,7,2,3,1)
-
+        self.layout().addWidget(self.autostartCB        , 3, 1, 3, -1)
+        self.layout().addWidget(saveSettingsBTN         , 4, 1, 3, -1)
+        self.layout().addWidget(makeSettingsDefaultBTN  , 5, 1, 3, -1)
+        self.layout().addWidget(resetSettingsBTN        , 6, 1, 3, -1)
+        self.layout().addWidget(startFIJIBTN            , 7, 1, 3, -1)
+        
         if self.autostartFIJI:
             self.startFIJI(self.fijiPath)
 
