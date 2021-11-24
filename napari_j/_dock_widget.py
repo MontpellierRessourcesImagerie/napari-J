@@ -482,19 +482,23 @@ class Connection(QWidget):
             self.jvmPath,
             "-ea",
             "-Dpython.cachedir.skip=false",
-            "-Dplugins.dir=.",
-            "-Dimagej.dir=.",
-            "-Dij.dir=.",
-            "-Dfiji.dir=.",
-            "-Dij.executable= "
+            "-Dij.dir="+os.getcwd()
         )
+        paths = {}
         for path in Path('./jars').rglob('*.jar'):
-            addClassPath(self.path + str(path))
+            jar = str(path).split('/')[-1]
+            if not jar in paths:
+                addClassPath(self.path + str(path))
+                paths[jar]=jar
         for path in Path('./plugins').rglob('*.jar'):
-            addClassPath(self.path + str(path))
-        from net.imagej.launcher import ClassLauncher
-        ClassLauncher.main(("-ijjarpath", "jars", "-ijjarpath", "plugins", "net.imagej.Main"))
+            jar = str(path).split('/')[-1]
+            if not jar in paths:
+                addClassPath(self.path + str(path))
+                paths[jar]=jar
         from ij import IJ, ImageJ
+        from net.imagej.launcher import ClassLauncher
+        IJ.log("STARTING")
+        ClassLauncher.main(("-ijjarpath", "plugins", "-ijjarpath", "jars", "-ijjarpath", "retro", "net.imagej.Main"))
         IJ.setProperty('jupter_connection_file', jupyter_client.find_connection_file())
         IJ.setProperty('python_executable', sys.executable)
 
