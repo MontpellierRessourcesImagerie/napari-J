@@ -215,4 +215,4 @@ class Bridge:
                     self.viewer.open(join(currentDirectory, filename),layer_type=type,name=name,face_colormap=croppedColormap,scale=[zFactor, 1, 1],size=3,properties=properties,face_color='confidence',face_contrast_limits=(0.0,1.0))
                 if(type == 'shapes'):
                     self.viewer.open(join(currentDirectory, filename),layer_type=type,name=name,face_colormap=colormap,scale=[zFactor, 1, 1])
-                
+
