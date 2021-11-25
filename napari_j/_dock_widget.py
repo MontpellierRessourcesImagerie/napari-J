@@ -495,10 +495,9 @@ class Connection(QWidget):
             if not jar in paths:
                 addClassPath(self.path + str(path))
                 paths[jar]=jar
-        from ij import IJ, ImageJ
         from net.imagej.launcher import ClassLauncher
-        IJ.log("STARTING")
         ClassLauncher.main(("-ijjarpath", "plugins", "-ijjarpath", "jars", "-ijjarpath", "retro", "net.imagej.Main"))
+        from ij import IJ, ImageJ
         IJ.setProperty('jupter_connection_file', jupyter_client.find_connection_file())
         IJ.setProperty('python_executable', sys.executable)
 
