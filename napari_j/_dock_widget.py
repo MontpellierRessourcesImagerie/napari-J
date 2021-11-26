@@ -482,6 +482,10 @@ class Connection(QWidget):
             self.jvmPath,
             "-ea",
             "-Dpython.cachedir.skip=false",
+            "-Dplugins.dir=.",
+            "-Dimagej.dir=.",
+            "-Dfiji.dir=.",
+            "-Dij.executable= ",
             "-Dij.dir="+os.getcwd()
         )
         paths = {}
@@ -496,7 +500,7 @@ class Connection(QWidget):
                 addClassPath(self.path + str(path))
                 paths[jar]=jar
         from net.imagej.launcher import ClassLauncher
-        ClassLauncher.main(("-ijjarpath", "plugins", "-ijjarpath", "jars", "-ijjarpath", "retro", "net.imagej.Main"))
+        ClassLauncher.main(("-ijjarpath", "jars", "-ijjarpath", "plugins", "-ijjarpath", "retro", "net.imagej.Main"))
         from ij import IJ, ImageJ
         IJ.setProperty('jupter_connection_file', jupyter_client.find_connection_file())
         IJ.setProperty('python_executable', sys.executable)
