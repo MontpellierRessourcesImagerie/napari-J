@@ -234,6 +234,8 @@ class Image(QWidget):
         btnNewViewer.clicked.connect(self._on_click_new_viewer)
         btnGetImage = QPushButton("Get Image")
         btnGetImage.clicked.connect(self._on_click_get_image)
+        btnGetLabels = QPushButton("Get Labels")
+        btnGetLabels.clicked.connect(self._on_click_get_labels)
         btnScreenshot = QPushButton("Screenshot")
         btnScreenshot.clicked.connect(self._on_click_screenshot)
 
@@ -258,17 +260,18 @@ class Image(QWidget):
         self.setLayout(QGridLayout())
         self.layout().addWidget(btnNewViewer    , 1, 1, 1, -1)
         self.layout().addWidget(btnGetImage     , 2, 1, 1, -1)
-        self.layout().addWidget(btnScreenshot   , 3, 1, 1, -1)
+        self.layout().addWidget(btnGetLabels    , 3, 1, 1, -1)
+        self.layout().addWidget(btnScreenshot   , 4, 1, 1, -1)
 
-        self.layout().addWidget(loadLabel       , 4, 1, 1, 2)
-        self.layout().addWidget(self.loadInput  , 5, 1)
-        self.layout().addWidget(btnBrowseload   , 5, 2)
-        self.layout().addWidget(btnLoad         , 6, 1, 1, 2)
+        self.layout().addWidget(loadLabel       , 5, 1, 1, 2)
+        self.layout().addWidget(self.loadInput  , 6, 1)
+        self.layout().addWidget(btnBrowseload   , 6, 2)
+        self.layout().addWidget(btnLoad         , 7, 1, 1, 2)
 
-        self.layout().addWidget(saveLabel       , 7, 1, 1, 2)
-        self.layout().addWidget(self.saveInput  , 8, 1)
-        self.layout().addWidget(btnBrowseSave   , 8, 2)
-        self.layout().addWidget(btnSave         , 9, 1, 1, 2)
+        self.layout().addWidget(saveLabel       , 8, 1, 1, 2)
+        self.layout().addWidget(self.saveInput  , 9, 1)
+        self.layout().addWidget(btnBrowseSave   , 9, 2)
+        self.layout().addWidget(btnSave         , 10, 1, 1, 2)
 
 
     def _on_click_browse_load(self):
@@ -289,6 +292,9 @@ class Image(QWidget):
     def _on_click_get_image(self):
     	self.getImage()
 
+    def _on_click_get_labels(self):
+        self.getLabels()
+        
     def _on_click_screenshot(self):
     	self.screenshot()
 
@@ -308,6 +314,13 @@ class Image(QWidget):
         print("Fetching the active image from IJ")
         self.bridge.getActiveImageFromIJ()	 
  
+    def getLabels(self):
+        from .bridge import Bridge
+        if not self.bridge:
+            self.bridge = Bridge(self.viewer)
+        print("Fetching the active labels image from IJ")
+        self.bridge.getLabelsFromIJ()	 
+    
     def screenshot(self):
         from .bridge import Bridge
         if not self.bridge:

@@ -24,6 +24,21 @@ class Bridge:
     def getActiveImageFromIJ(self):
         for c in range(0, len(self.viewer.layers)):
             self.viewer.layers.pop(0)
+        title, dims, zFactor, pixels = self.getPixelsFromImageJ()
+        colors = self.colors
+        for c in range(0, dims[2]):
+            self.viewer.add_image(pixels.reshape(dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, c, :, :],
+                             name="C" + str(c + 1) + "-" + str(title),
+                             colormap=colors[c],
+                             blending='additive',
+                             scale=[zFactor, 1, 1])
+        self.viewer.dims.ndisplay = 3
+
+    def getLabelsFromIJ(self):
+    	title, dims, zFactor, pixels = self.getPixelsFromImageJ()
+    	self.viewer.add_labels(pixels.reshape(dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, 0, :, :].astype(int), name=str(title))
+    	
+    def getPixelsFromImageJ(self):
         image = IJ.getImage()
         cal = image.getCalibration()
         zFactor = cal.getZ(1) / cal.getX(1)
@@ -44,15 +59,8 @@ class Bridge:
             image2 = HyperStackConverter.toHyperStack(image, dims[2], dims[3], dims[4], "Composite");
             image.close()
             image2.show()
-        colors = self.colors
-        for c in range(0, dims[2]):
-            self.viewer.add_image(pixels.reshape(dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, c, :, :],
-                             name="C" + str(c + 1) + "-" + str(title),
-                             colormap=colors[c],
-                             blending='additive',
-                             scale=[zFactor, 1, 1])
-        self.viewer.dims.ndisplay = 3
-
+        return title, dims, zFactor, pixels
+            
     def screenshot(self):
         screenshot = self.viewer.screenshot(canvas_only=True)
         pixels = JInt[:](list(screenshot[:, :, 0:3].flatten()))
