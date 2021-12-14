@@ -26,11 +26,6 @@ class Bridge:
             self.viewer.layers.pop(0)
         title, dims, zFactor, pixels = self.getPixelsFromImageJ()
         image = IJ.getImage()
-        shift = 128
-        bitDepth = image.getBitDepth()
-        if bitDepth==16:
-            shift = 32768
-        pipxels = pixels + shift
         colors = self.colors
         for c in range(0, dims[2]):
             self.viewer.add_image(pixels.reshape(dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, c, :, :],
@@ -42,57 +37,45 @@ class Bridge:
 
     def getLabelsFromIJ(self):
     	title, dims, zFactor, pixels = self.getPixelsFromImageJ()
-    	self.viewer.add_labels(pixels.reshape(dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, 0, :, :].astype(int), name=str(title))
+    	self.viewer.add_labels(pixels.reshape(dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, 0, :, :].astype(int), name=str(title), scale=[zFactor, 1, 1])
     	
     def getPixelsFromImageJ(self):
         image = IJ.getImage()
+        title, dims, zFactor, size = self.getMetadataFromImage(image)
+        isHyperStack = image.isHyperStack()
+        HyperStackConverter.toStack(image)
+        stackDims = list(image.getDimensions())
+        dim = stackDims[3]
+        if stackDims[2] == 1 and stackDims[3] == 1 and stackDims[4] > 1:
+            dim = dims[4]
+        if size<=2147483647:
+                pixels = np.array(image.getStack().getVoxels(0, 0, 0, stackDims[0], stackDims[1], dim, []))
+        else:
+                ia = image.getStack().getImageArray()
+                ia = list(filter(None, ia))
+                pixels = np.array(ia)
+        if isHyperStack:
+            self.toHyperstack(image, dims)
+        return title, dims, zFactor, pixels
+    
+    def getMetadataFromImage(self, image):
         dims = list(image.getDimensions())
         size = dims[0]*dims[1]*dims[3]*dims[4]
-        if size<=2147483647:
-                return self.getPixelsSmallFromImageJ()
+        cal = image.getCalibration()
+        zFactor = cal.getZ(1) / cal.getX(1)
+        title = image.getShortTitle()
+        dims = list(image.getDimensions())
+        return title, dims, zFactor, size
+    
+    def toHyperstack(self, image, dims):
+        image2 = HyperStackConverter.toHyperStack(image, dims[2], dims[3], dims[4], "Composite");
+        if image2.getID() == image.getID():
+            image.hide()
+            image.show()
         else:
-                return self.getPixelsBigFromImageJ()
-        
-    def getPixelsSmallFromImageJ(self):
-        image = IJ.getImage()
-        cal = image.getCalibration()
-        zFactor = cal.getZ(1) / cal.getX(1)
-        title = image.getShortTitle()
-        dims = list(image.getDimensions())
-        isHyperStack = image.isHyperStack()
-        HyperStackConverter.toStack(image)
-        stackDims = list(image.getDimensions())
-        dim = stackDims[3]
-        if stackDims[2] == 1 and stackDims[3] == 1 and stackDims[4] > 1:
-            dim = dims[4]
-        pixels = np.array(image.getStack().getVoxels(0, 0, 0, stackDims[0], stackDims[1], dim, []))
-        if isHyperStack:
-            image2 = HyperStackConverter.toHyperStack(image, dims[2], dims[3], dims[4], "Composite");
             image.close()
             image2.show()
-        return title, dims, zFactor, pixels
-
-    def getPixelsBigFromImageJ(self):
-        image = IJ.getImage()
-        cal = image.getCalibration()
-        zFactor = cal.getZ(1) / cal.getX(1)
-        title = image.getShortTitle()
-        dims = list(image.getDimensions())
-        isHyperStack = image.isHyperStack()
-        HyperStackConverter.toStack(image)
-        stackDims = list(image.getDimensions())
-        dim = stackDims[3]
-        if stackDims[2] == 1 and stackDims[3] == 1 and stackDims[4] > 1:
-            dim = dims[4]
-        ia = image.getStack().getImageArray()
-        ia = list(filter(None, ia))
-        pixels = np.array(ia)
-        if isHyperStack:
-            image2 = HyperStackConverter.toHyperStack(image, dims[2], dims[3], dims[4], "Composite");
-            image.close()
-            image2.show()
-        return title, dims, zFactor, pixels
-
+            
     def screenshot(self):
         screenshot = self.viewer.screenshot(canvas_only=True)
         pixels = JInt[:](list(screenshot[:, :, 0:3].flatten()))
