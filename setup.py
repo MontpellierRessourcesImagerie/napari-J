@@ -2,10 +2,7 @@
 # -*- coding: utf-8 -*-
 from setuptools import setup
 
-
-# https://github.com/pypa/setuptools_scm
 use_scm = {"write_to": "napari_j/_version.py"}
-
 
 setup(
     use_scm_version=use_scm,
@@ -31,7 +28,9 @@ setup(
 	'Framework :: napari',
     ],
     
+    setup_requires=['setuptools_scm'],
+    
      install_requires=[
-        'jpype1>=1.2.1',
+        'JPype1>=1.2.1',
     ],
 )
