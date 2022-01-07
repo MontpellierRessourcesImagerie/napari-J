@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from setuptools import setup
 
+
 use_scm = {"write_to": "napari_j/_version.py"}
 
 setup(
