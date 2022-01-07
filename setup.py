@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 from setuptools import setup
 
+def local_scheme(version):
+    return ""
 
 use_scm = {"write_to": "napari_j/_version.py"}
 
 setup(
-    use_scm_version=use_scm,
+    use_scm_version={"local_scheme": local_scheme},
     
     entry_points={
         'napari.plugin': [
@@ -33,5 +35,6 @@ setup(
     
      install_requires=[
         'JPype1>=1.2.1',
+        'matplotlib',
     ],
 )
