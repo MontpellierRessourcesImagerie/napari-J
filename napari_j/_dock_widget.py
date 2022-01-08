@@ -1,6 +1,6 @@
-"""
-The NapariJ-plugin connects napari and ImageJ (both ways). Napari (and python) accesses ImageJ
-via jpype. ImageJ can access napari and python via the jupyter-client.
+""" The NapariJ-plugin connects napari and ImageJ (both ways). Napari
+(and python) accesses ImageJ via jpype. ImageJ can access napari and
+python via the jupyter-client.
 
 The plugin has the following features:
 - start FIJI
@@ -8,26 +8,29 @@ The plugin has the following features:
 - send a snapshot from napari to FIJI
 - use FIJI to detect spots, display and filter spots in napari, send the filtered spots back to FIJI
 """
+import sys
+import os
+import shutil
+import copy
+from pathlib import Path
+import yaml
+import jupyter_client
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+import napari
 from napari_plugin_engine import napari_hook_implementation
-from qtpy.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QGridLayout, QFileDialog, QCheckBox
+from qtpy import QtCore, QtWidgets
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QGridLayout, QFileDialog, QCheckBox, QLineEdit, QLabel, QMessageBox, QSlider
 from magicgui import magic_factory
+
 from jpype import *
 # Enable Java imports
 import jpype.imports
 # Pull in types
 from jpype.types import *
-import os, shutil
-from pathlib import Path
-import yaml
-import jupyter_client
-import sys
-from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QLineEdit, QLabel, QMessageBox, QSlider
-from PyQt5.QtCore import Qt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-import matplotlib.pyplot as plt
-import napari, copy
-import numpy as np
+
 
 class Points(QWidget):
 
