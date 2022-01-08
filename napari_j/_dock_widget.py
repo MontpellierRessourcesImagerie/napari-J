@@ -347,9 +347,13 @@ class Connection(QWidget):
     
     config = None
     home = None
+    configDir = None
+
     def __init__(self, napari_viewer):
         super().__init__()
         self.home = os.getcwd()
+        self.configDir = Path.home().joinpath(".napari-j")
+        self.createConfig()
         self.readConfig()
         self.viewer = napari_viewer
 
@@ -400,8 +404,17 @@ class Connection(QWidget):
         if self.autostartFIJI:
             self.startFIJI(self.fijiPath)
 
+    def createConfig(self):
+        if not self.configDir.exists():
+            self.configDir.mkdir()
+        configFile = self.configDir.joinpath("naparij.yml")
+        if not configFile.exists():
+            self.config = {'connection': {'fiji_path': str(Path.home()), 'jvm_path': str(Path.home()), 'autostart_fiji': False}}
+            with configFile.open(mode='w') as file:
+                yaml.dump(self.config, file)   
+        
     def readConfig(self):
-        with open('./naparij.yml', 'r') as file:
+        with self.configDir.joinpath('./naparij.yml').open() as file:
             params = yaml.load(file, Loader=yaml.FullLoader)
         self.config = params
         connectionParams = params['connection']
@@ -420,14 +433,16 @@ class Connection(QWidget):
 
     def makeSettingsDefault(self):
         try:
-            shutil.copy("./naparij.yml", "./naparij_default.yml")
+            shutil.copy(str(self.configDir.joinpath("naparij.yml")),
+                        str(self.configDir.joinpath("naparij_default.yml")))
             self.showMessage("make settings default...", "The settings have been defined as default.")
         except:
             self.showMessage("make settings default...", "Failed to make the settings default.")
 
     def resetSettings(self):
         try:
-            shutil.copy("./naparij_default.yml", "./naparij.yml")
+            shutil.copy(str(self.configDir.joinpath("naparij_default.yml")),
+                        str(self.configDir.joinpath("naparij.yml")))
             self.showMessage("reset settings...", "The settings have been reset.")
         except:
             self.showMessage("reset settings...", "Failed to reset the settings.")
@@ -465,7 +480,7 @@ class Connection(QWidget):
             self.activateAutostartFIJI()
         else:
             self.deactivateAutostartFIJI()
-        with open('./naparij.yml', 'w') as file:
+        with self.configDir.joinpath("naparij.yml").open(mode='w') as file:
             yaml.dump(self.config, file)
         self.showMessage("Settings saved...", "The settings have been saved.")
 
