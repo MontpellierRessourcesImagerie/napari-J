@@ -1,9 +1,11 @@
+import yaml
+import pandas as pd
+from os import listdir
+from os.path import isfile, join
 from jpype import *
 import jpype.imports
 from jpype.types import *
 import numpy as np
-import napari
-import pandas as pd
 from ij.measure import ResultsTable
 from ij import IJ, ImagePlus, WindowManager
 from ij.plugin import HyperStackConverter
@@ -11,9 +13,7 @@ from napari.utils.colormaps import *
 from napari.utils.colormaps.colormap_utils import * 
 from vispy.color import Colormap, get_colormap
 
-from os import listdir
-from os.path import isfile, join
-import yaml
+
 
 class Bridge:
     colors = ['magenta', 'cyan', 'yellow', 'red', 'green', 'blue', 'orange', 'brown', 'white']
@@ -155,7 +155,8 @@ class Bridge:
     def pointsToIJ(self, points):
         sel = [(coords, v) for coords,v in zip(points.data, points.properties['confidence']) if v>0]
         rw = WindowManager.getWindow("Results")
-        rw.close(False)
+        if rw:
+            rw.close(False)
         counter = 0;
         rt = ResultsTable(JObject(JInt(len(sel))));
         for row in sel:
