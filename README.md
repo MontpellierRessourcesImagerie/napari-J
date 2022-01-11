@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/pypi/l/napari-J.svg?color=green)](https://github.com/MontpellierRessourcesImagerie/napari-J/raw/master/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/napari-J.svg?color=green)](https://pypi.org/project/napari-J)
 [![Python Version](https://img.shields.io/pypi/pyversions/napari-J.svg?color=green)](https://python.org)
-[![tests](https://github.com/MontpellierRessourcesImagerie/napari-J/workflows/tests/badge.svg)](https://github.com/volker-baecker/napari-J/actions)
+[![tests](https://github.com/MontpellierRessourcesImagerie/napari-J/workflows/tests/badge.svg)](https://github.com/MontpellierRessourcesImagerie/napari-J/actions)
 [![codecov](https://codecov.io/gh/MontpellierRessourcesImagerie/napari-J/branch/master/graph/badge.svg)](https://codecov.io/gh/MontpellierRessourcesImagerie/napari-J)
 
 A plugin to exchange data with FIJI and to use FIJI image analysis from napari.
@@ -61,7 +61,7 @@ If you encounter any problems, please [file an issue](https://github.com/Montpel
 [Apache Software License 2.0]: http://www.apache.org/licenses/LICENSE-2.0
 [Mozilla Public License 2.0]: https://www.mozilla.org/media/MPL/2.0/index.txt
 [cookiecutter-napari-plugin]: https://github.com/napari/cookiecutter-napari-plugin
-[file an issue]: https://github.com/volker-baecker/napari-J/issues
+[file an issue]: https://github.com/MontpellierRessourcesImagerie/napari-J/issues
 [napari]: https://github.com/napari/napari
 [tox]: https://tox.readthedocs.io/en/latest/
 [pip]: https://pypi.org/project/pip/
