@@ -204,7 +204,7 @@ class Connection(QWidget):
         from ij import IJ, ImageJ
         IJ.setProperty('jupter_connection_file', jupyter_client.find_connection_file())
         IJ.setProperty('python_executable', sys.executable)
-        os.chdir(self.originalDir)
+        #os.chdir(self.originalDir)
 
     def startFIJI(self, aPath):
         self.originalDir = os.getcwd()

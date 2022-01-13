@@ -91,13 +91,20 @@ class Bridge:
         results = ResultsTable.getResultsTable(tableTitle)
         cal = IJ.getImage().getCalibration()
         headings = list(results.getColumnHeadings().split("\t"))[1:]
+        confidenceHeaders = ["V","Confidence","Z"]
+        confidenceHeaderID = len(confidenceHeaders)
         data = {}
         for i in range(0, len(headings)):
+            if(headings[i] in confidenceHeaders):
+                confidenceHeaderID = min(confidenceHeaders.index(headings[i]),confidenceHeaderID)
             data[headings[i]] = results.getColumn(i)
         results = pd.DataFrame(data=data)
-        coords = [[z, y, x] for [x,y,z] in np.delete(results.values,[3], axis=1)]
+
+        coords = [[z, y, x] for [x,y,z] in results.iloc[:,0:3].to_numpy()]
         zFactor = cal.getZ(1) / cal.getX(1)
-        qualities = results['V'].values / 255
+
+
+        qualities = results[confidenceHeaders[confidenceHeaderID]].values / 255
         properties = {'confidence' : qualities}
         colormap = self.cropColormap(inColormap)
         points_layer = self.viewer.add_points(coords, properties=properties,name=tableTitle,

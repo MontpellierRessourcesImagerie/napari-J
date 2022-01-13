@@ -2,7 +2,7 @@ import copy
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QWidget, QPushButton, QGridLayout, QSlider
+from qtpy.QtWidgets import QWidget, QPushButton, QGridLayout, QSlider, QLineEdit
 from magicgui import magic_factory
 
 
@@ -25,6 +25,10 @@ class Points(QWidget):
     def __init__(self, napari_viewer):
         super().__init__()
         self.viewer = napari_viewer
+
+        self.fieldTableName = QLineEdit(self)
+        self.fieldTableName.setText("Results")
+
         btnGetPoints = QPushButton("Get Points")
         btnGetPoints.clicked.connect(self._on_click_get_points)
         
@@ -51,7 +55,8 @@ class Points(QWidget):
         btnGetLines.clicked.connect(self._on_click_getLines)
         
         self.setLayout(QGridLayout())
-        self.layout().addWidget(btnGetPoints        , 1, 1, 1, -1)
+        self.layout().addWidget(self.fieldTableName , 1, 1, 1,  2)
+        self.layout().addWidget(btnGetPoints        , 1, 3, 1, -1)
         self.layout().addWidget(self.canvas         , 2, 1, 1, -1)
         self.layout().addWidget(self.sliderMin      , 3, 1, 1, -1)
         self.layout().addWidget(self.sliderMax      , 4, 1, 1, -1)
@@ -120,7 +125,8 @@ class Points(QWidget):
         self.canvas.draw()
 
     def _on_click_get_points(self):
-        self.selectedPoints, self.confidence = self.getPoints()
+        self.selectedPoints, self.confidence = self.getPoints(self.fieldTableName.text())
+        #self.selectedPoints, self.confidence = self.getPoints()
         self.points[id(self.selectedPoints)] = self.selectedPoints, self.confidence
         self.drawHistogram()
 
@@ -180,9 +186,9 @@ class Points(QWidget):
             self.bridge = Bridge(self.viewer)
         return self.bridge
     
-    def getPoints(self):
+    def getPoints(self,tableTitle="Results"):
         print("Fetching points from IJ")
-        self.getBridge().displayPoints()
+        self.getBridge().displayPoints(tableTitle)
         points = self.getSelectedLayer()
         if not points:
             return
