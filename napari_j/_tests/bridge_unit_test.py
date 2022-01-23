@@ -33,7 +33,7 @@ HyperStackConverterMock = Mock()
 @surrogate('ij.WindowManager')
 @surrogate('ij.plugin.HyperStackConverter')
 @patch('ij.plugin.HyperStackConverter', HyperStackConverterMock)
-def test_one(Viewer):
+def test_constructor(Viewer):
     from ..bridge import Bridge
     viewer = napari.Viewer()
     bridge = Bridge(viewer)
