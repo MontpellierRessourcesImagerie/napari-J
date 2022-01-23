@@ -14,8 +14,10 @@ from napari.utils.colormaps.colormap_utils import *
 from vispy.color import Colormap, get_colormap
 
 
-
 class Bridge:
+    '''
+        The Bridge allows napari to communicate with ImageJ.
+    '''
     colors = ['magenta', 'cyan', 'yellow', 'red', 'green', 'blue', 'orange', 'brown', 'white']
 
     def __init__(self, viewer):
@@ -25,12 +27,10 @@ class Bridge:
         for c in range(0, len(self.viewer.layers)):
             self.viewer.layers.pop(0)
         title, dims, zFactor, pixels = self.getPixelsFromImageJ()
-        image = IJ.getImage()
-        colors = self.colors
         for c in range(0, dims[2]):
             self.viewer.add_image(pixels.reshape(dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, c, :, :],
                              name="C" + str(c + 1) + "-" + str(title),
-                             colormap=colors[c],
+                             colormap=self.colors[c],
                              blending='additive',
                              scale=[zFactor, 1, 1])
         self.viewer.dims.ndisplay = 3
@@ -64,7 +64,6 @@ class Bridge:
         cal = image.getCalibration()
         zFactor = cal.getZ(1) / cal.getX(1)
         title = image.getShortTitle()
-        dims = list(image.getDimensions())
         return title, dims, zFactor, size
     
     def toHyperstack(self, image, dims):
@@ -221,7 +220,6 @@ class Bridge:
             configs = yaml.load(file, Loader=yaml.FullLoader)
             #Calibration:
             x=configs['calibration']['x']
-            y=configs['calibration']['y']
             z=configs['calibration']['z']
             zFactor = z / x
             for parameter in configs['layers']:

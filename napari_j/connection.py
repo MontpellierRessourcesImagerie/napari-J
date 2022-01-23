@@ -178,6 +178,7 @@ class Connection(QWidget):
         self.startFIJI(self.fijiPath)
 
     def start(self):
+        print("Starting jvm...");
         startJVM(
             self.jvmPath,
             "-ea",
