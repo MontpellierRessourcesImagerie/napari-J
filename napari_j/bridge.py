@@ -86,28 +86,35 @@ class Bridge:
         ip = ImagePlus("screenshot of " + title, image)
         ip.show()
 
-    def displayPoints(self,inColormap='inferno'):
-        results = ResultsTable.getResultsTable() #getResultsTable('title') should work
+    def displayPoints(self,tableTitle="Results",inColormap='inferno'):
+        results = ResultsTable.getResultsTable(tableTitle)
         cal = IJ.getImage().getCalibration()
         headings = list(results.getColumnHeadings().split("\t"))[1:]
+        confidenceHeaders = ["V","Confidence","Z"]
+        confidenceHeaderID = len(confidenceHeaders)
         data = {}
         for i in range(0, len(headings)):
+            if(headings[i] in confidenceHeaders):
+                confidenceHeaderID = min(confidenceHeaders.index(headings[i]),confidenceHeaderID)
             data[headings[i]] = results.getColumn(i)
         results = pd.DataFrame(data=data)
-        coords = [[z, y, x] for [x,y,z] in np.delete(results.values,[3], axis=1)]
+
+        coords = [[z, y, x] for [x,y,z] in results.iloc[:,0:3].to_numpy()]
         zFactor = cal.getZ(1) / cal.getX(1)
-        qualities = results['V'].values / 255
+
+
+        qualities = results[confidenceHeaders[confidenceHeaderID]].values / 255
         properties = {'confidence' : qualities}
         colormap = self.cropColormap(inColormap)
-        points_layer = self.viewer.add_points(coords,  properties=properties,
+        points_layer = self.viewer.add_points(coords, properties=properties,name=tableTitle,
                                                   face_color='confidence',
                                                   face_colormap=colormap,
                                                   face_contrast_limits=(0.0,1.0),
                                                   size=3, scale=[zFactor, 1, 1])
 
 
-    def getPairs(self):
-        results = ResultsTable.getResultsTable()
+    def getPairs(self,tableTitle="Results"):
+        results = ResultsTable.getResultsTable(tableTitle)
         cal = IJ.getImage().getCalibration()
         headings = list(results.getColumnHeadings().split("\t"))[1:]
         data = {}
@@ -140,7 +147,7 @@ class Bridge:
         lines = []
         for i in range(len(coordsA)):
             lines.append([coordsA[i],coordsB[i]])
-        self.viewer.add_shapes(lines, shape_type='line', scale=[zFactor, 1, 1])
+        self.viewer.add_shapes(lines,name=tableTitle, shape_type='line', scale=[zFactor, 1, 1])
 
     def cropColormap(self,colorMapName):
         #Get colorMap values
