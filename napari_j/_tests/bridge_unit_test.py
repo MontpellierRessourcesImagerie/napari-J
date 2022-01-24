@@ -8,17 +8,26 @@ Created on Sun Jan 23 22:19:32 2022
 
 import sys
 sys.path.append('./napari_j/_tests/surrogate')
-from surrogate import surrogate
+if __name__ == '__main__':
+    from surrogate.surrogate import surrogate
+else:
+    from surrogate import surrogate
 from unittest.mock import patch
 from unittest.mock import Mock, MagicMock
 import napari
+import numpy as np
 
 def getImage():
     imageMock = MagicMock()
-    imageMock.getDimensions.return_value = [2, 3, 1, 1, 1]
+    imageMock.getDimensions.return_value = [3, 2, 1, 1, 1]
+    imageMock.getShortTitle.return_value = 'blobs'
     stackMock = MagicMock()
     stackMock.getVoxels.return_value = [255, 0 ,128, 0, 64, 32]
     imageMock.getStack.return_value = stackMock
+    calibrationMock = MagicMock()
+    calibrationMock.getZ.return_value = 2.5
+    calibrationMock.getX.return_value = 1
+    imageMock.getCalibration.return_value = calibrationMock
     return imageMock
 
 IJMock = Mock()
@@ -34,7 +43,10 @@ HyperStackConverterMock = Mock()
 @surrogate('ij.plugin.HyperStackConverter')
 @patch('ij.plugin.HyperStackConverter', HyperStackConverterMock)
 def test_constructor(Viewer):
-    from ..bridge import Bridge
+    if __name__ == '__main__':
+        from bridge import Bridge 
+    else:    
+        from ..bridge import Bridge 
     viewer = napari.Viewer()
     bridge = Bridge(viewer)
     assert(bridge.viewer==viewer)
@@ -48,9 +60,43 @@ def test_constructor(Viewer):
 @surrogate('ij.plugin.HyperStackConverter')
 @patch('ij.plugin.HyperStackConverter', HyperStackConverterMock)
 def test_getActiveImageFromIJ(Viewer):
-    from ..bridge import Bridge 
+    if __name__ == '__main__':
+        from bridge import Bridge 
+    else:    
+        from ..bridge import Bridge 
     viewer = napari.Viewer()
     bridge = Bridge(viewer)
     bridge.getActiveImageFromIJ()
-    assert(bridge.viewer.dims.ndisplay==3)
     
+    # Display should be set to 3D
+    assert(viewer.dims.ndisplay==3)
+
+    # The voxel data should be rearranged in the form expected by napari 
+    actual = viewer.add_image.call_args[0]
+    expected = np.array([[[[255,0,128], [0,64,32]]]])
+    comparison = actual == expected
+    assert(comparison.all())
+
+    # The name should be C<channel-nr.>-<short title of the ij-image>
+    assert(viewer.add_image.call_args[1]['name']=='C1-blobs')
+    
+    # The lut should be the first (or n-th) color defined in Bridge
+    assert(viewer.add_image.call_args[1]['colormap']==bridge.colors[0])
+    
+    # The default blending should be additive
+    assert(viewer.add_image.call_args[1]['blending']=='additive')
+    
+    # The z-scale should have been calculated as the ratio of the z-step and
+    # the x-pixel size.
+    assert(viewer.add_image.call_args[1]['scale'][0]==2.5)
+    assert(viewer.add_image.call_args[1]['scale'][1]==1)    
+    assert(viewer.add_image.call_args[1]['scale'][2]==1)
+    
+    # All layers are removed from napari before an image is fetched from ij.
+    viewer.layers.__len__.return_value = 1
+    bridge.getActiveImageFromIJ()
+    bridge.viewer.layers.pop.assert_called_once()
+    
+if __name__ == '__main__':
+    test_constructor()
+    test_getActiveImageFromIJ()
