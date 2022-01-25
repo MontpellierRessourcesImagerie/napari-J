@@ -22,7 +22,7 @@ def getImage():
     imageMock.getDimensions.return_value = [3, 2, 1, 1, 1]
     imageMock.getShortTitle.return_value = 'blobs'
     stackMock = MagicMock()
-    stackMock.getVoxels.return_value = [255, 0 ,128, 0, 64, 32]
+    stackMock.getVoxels.return_value = [255.0, 0.0 ,128.0, 0.0, 64.0, 32.0]
     imageMock.getStack.return_value = stackMock
     calibrationMock = MagicMock()
     calibrationMock.getZ.return_value = 2.5
@@ -73,7 +73,7 @@ def test_getActiveImageFromIJ(Viewer):
 
     # The voxel data should be rearranged in the form expected by napari 
     actual = viewer.add_image.call_args[0]
-    expected = np.array([[[[255,0,128], [0,64,32]]]])
+    expected = np.array([[[[255.0, 0.0, 128.0], [0.0, 64.0, 32.0]]]])
     comparison = actual == expected
     assert(comparison.all())
 
@@ -96,7 +96,79 @@ def test_getActiveImageFromIJ(Viewer):
     viewer.layers.__len__.return_value = 1
     bridge.getActiveImageFromIJ()
     bridge.viewer.layers.pop.assert_called_once()
+
+@patch('napari.Viewer')
+@surrogate('ij.measure.ResultsTable')
+@surrogate('ij.IJ')
+@patch('ij.IJ', IJMock)
+@surrogate('ij.ImagePlus')
+@surrogate('ij.WindowManager')
+@surrogate('ij.plugin.HyperStackConverter')
+@patch('ij.plugin.HyperStackConverter', HyperStackConverterMock)    
+def test_getLabelsFromIJ(Viewer):
+    if __name__ == '__main__':
+        from bridge import Bridge 
+    else:    
+        from ..bridge import Bridge 
+    viewer = napari.Viewer()
+    bridge = Bridge(viewer)
+    bridge.getLabelsFromIJ()
+
+    # The image data should be of type int, independent from the image type in ij.
+    actual = viewer.add_labels.call_args[0]
+    expected = np.array([[[[255, 0, 128], [0, 64, 32]]]])
+    comparison = actual == expected
+    assert(comparison.all())
+    assert(isinstance(actual[0][0][0][0][0], np.int64))
+    
+    # The name should be short title of the ij-image
+    assert(viewer.add_labels.call_args[1]['name']=='blobs')
+    
+    # The z-scale should have been calculated as the ratio of the z-step and
+    # the x-pixel size.
+    assert(viewer.add_labels.call_args[1]['scale'][0]==2.5)
+    assert(viewer.add_labels.call_args[1]['scale'][1]==1)    
+    assert(viewer.add_labels.call_args[1]['scale'][2]==1)
+
+@patch('napari.Viewer')
+@surrogate('ij.measure.ResultsTable')
+@surrogate('ij.IJ')
+@patch('ij.IJ', IJMock)
+@surrogate('ij.ImagePlus')
+@surrogate('ij.WindowManager')
+@surrogate('ij.plugin.HyperStackConverter')
+@patch('ij.plugin.HyperStackConverter', HyperStackConverterMock)    
+def test_getPixelsFromImageJ(Viewer):
+    if __name__ == '__main__':
+        from bridge import Bridge 
+    else:    
+        from ..bridge import Bridge
+    viewer = napari.Viewer()
+    bridge = Bridge(viewer)
+    title, dims, zFactor, pixels = bridge.getPixelsFromImageJ()
+
+    # The title should be the short-title of the image in ImageJ
+    assert(title=='blobs')
+
+    # The test image has a width of 3 pixels, a height of 2 pixels, one channel,
+    # one z-slice and one time-frame.
+    expected = [3, 2, 1, 1, 1]
+    comparison = np.array(dims) == np.array(expected)
+    assert(comparison.all())
+
+    # The z-scale should have been calculated as the ratio of the z-step and
+    # the x-pixel size.
+    assert(zFactor==2.5)     
+    
+    # The pixel data is returned as a linear list with the order of dimensions
+    # given by dim, i.e. xyczt.
+    expected = np.array([255.0, 0.0, 128.0, 0.0, 64.0, 32.0])
+    comparison = pixels == expected
+    assert(comparison.all())
     
 if __name__ == '__main__':
     test_constructor()
     test_getActiveImageFromIJ()
+    test_getLabelsFromIJ()
+    test_getPixelsFromImageJ()
+    

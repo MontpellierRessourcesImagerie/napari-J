@@ -21,25 +21,75 @@ class Bridge:
     colors = ['magenta', 'cyan', 'yellow', 'red', 'green', 'blue', 'orange', 'brown', 'white']
 
     def __init__(self, viewer):
+        '''
+        The constructor creates a new Bridge-object. 
+
+        Parameters
+        ----------
+        viewer : napari.viewer.Viewer
+            The napari-viewer instance that will communicate with ImageJ.
+
+        Returns
+        -------
+        None.
+        '''
         self.viewer = viewer
 
     def getActiveImageFromIJ(self):
+        '''
+        Removes all layers from the viewer. Gets the active image from ImageJ
+        and add it's channels as image-layers to the viewer.
+        
+        Returns
+        -------
+        None.
+        '''
         for c in range(0, len(self.viewer.layers)):
             self.viewer.layers.pop(0)
         title, dims, zFactor, pixels = self.getPixelsFromImageJ()
         for c in range(0, dims[2]):
-            self.viewer.add_image(pixels.reshape(dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, c, :, :],
-                             name="C" + str(c + 1) + "-" + str(title),
-                             colormap=self.colors[c],
-                             blending='additive',
-                             scale=[zFactor, 1, 1])
+            self.viewer.add_image(pixels.reshape(
+                dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, c, :, :],
+                name="C" + str(c + 1) + "-" + str(title),
+                colormap=self.colors[c],
+                blending='additive',
+                scale=[zFactor, 1, 1])
         self.viewer.dims.ndisplay = 3
 
     def getLabelsFromIJ(self):
-    	title, dims, zFactor, pixels = self.getPixelsFromImageJ()
-    	self.viewer.add_labels(pixels.reshape(dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, 0, :, :].astype(int), name=str(title), scale=[zFactor, 1, 1])
+        '''
+        Adds the active image in ImageJ as a new labels-layer to the viewer.
+
+        Returns
+        -------
+        None.
+        '''
+        title, dims, zFactor, pixels = self.getPixelsFromImageJ()
+        self.viewer.add_labels(pixels.reshape(
+            dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, 0, :, :].astype(int), 
+            name=str(title), 
+            scale=[zFactor, 1, 1])
     	
     def getPixelsFromImageJ(self):
+        '''
+        Get the title, dimensions, zFactor and pixel data from the active 
+        image in ImageJ. The pixel data is returned as a linear list. Use
+        
+        pixels.reshape(dims[4], dims[3], dims[2], dims[1], dims[0])
+        
+        to get an image with the right order of dimensions for python.
+
+        Returns
+        -------
+        title : java.lang.String
+            The title of the image.
+        dims : list
+            A list [x,y,c,z,t] of the size in each dimension of the image.
+        zFactor : float
+            The ratio of the voxel size in the z-dimension and x-dimension.
+        pixels : numpy.ndarray
+            The pixel data of the active image in ImageJ as a linear list.
+        '''
         image = IJ.getImage()
         title, dims, zFactor, size = self.getMetadataFromImage(image)
         isHyperStack = image.isHyperStack()
