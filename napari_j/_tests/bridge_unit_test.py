@@ -165,10 +165,71 @@ def test_getPixelsFromImageJ(Viewer):
     expected = np.array([255.0, 0.0, 128.0, 0.0, 64.0, 32.0])
     comparison = pixels == expected
     assert(comparison.all())
+
+@patch('napari.Viewer')
+@surrogate('ij.measure.ResultsTable')
+@surrogate('ij.IJ')
+@patch('ij.IJ', IJMock)
+@surrogate('ij.ImagePlus')
+@surrogate('ij.WindowManager')
+@surrogate('ij.plugin.HyperStackConverter')
+@patch('ij.plugin.HyperStackConverter', HyperStackConverterMock)    
+def test_getMetadataFromImage(Viewer):
+    if __name__ == '__main__':
+        from bridge import Bridge 
+    else:    
+        from ..bridge import Bridge
+    viewer = napari.Viewer()
+    bridge = Bridge(viewer)
+    image = getImage()
+    title, dims, zFactor, size = bridge.getMetadataFromImage(image)
+
+    # The title should be the short-title of the image in ImageJ
+    assert(title=='blobs')
+
+    # The test image has a width of 3 pixels, a height of 2 pixels, one channel,
+    # one z-slice and one time-frame.
+    expected = [3, 2, 1, 1, 1]
+    comparison = np.array(dims) == np.array(expected)
+    assert(comparison.all())
+
+    # The z-scale should have been calculated as the ratio of the z-step and
+    # the x-pixel size.
+    assert(zFactor==2.5)
+
+    # The size of one channel of the image is the product of the sizes of the
+    # remaining dimensions (without c)
+    assert(size==dims[0]*dims[1]*dims[3]*dims[4])
+    assert(size==6)
+    
+@patch('napari.Viewer')
+@surrogate('ij.measure.ResultsTable')
+@surrogate('ij.IJ')
+@patch('ij.IJ', IJMock)
+@surrogate('ij.ImagePlus')
+@surrogate('ij.WindowManager')
+@surrogate('ij.plugin.HyperStackConverter')
+@patch('ij.plugin.HyperStackConverter', HyperStackConverterMock)
+def test_toHyperstack(Viewer):
+    if __name__ == '__main__':
+        from bridge import Bridge 
+    else:    
+        from ..bridge import Bridge
+    viewer = napari.Viewer()
+    bridge = Bridge(viewer)
+    image = getImage()
+    title, dims, zFactor, size = bridge.getMetadataFromImage(image)
+    bridge.toHyperstack(image, dims)
+    
+    # If the converted image has a different id from the input image, the
+    # input image is closed and the new image is shown.
+    image.close.assert_called_once()
     
 if __name__ == '__main__':
     test_constructor()
     test_getActiveImageFromIJ()
     test_getLabelsFromIJ()
     test_getPixelsFromImageJ()
-    
+    test_getMetadataFromImage()
+    test_toHyperstack()
+

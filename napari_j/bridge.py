@@ -109,6 +109,25 @@ class Bridge:
         return title, dims, zFactor, pixels
     
     def getMetadataFromImage(self, image):
+        '''
+        Get the metadata from the ImageJ image.
+
+        Parameters
+        ----------
+        image : ij.ImagePlus
+            The image from which the metadata is extracted.
+
+        Returns
+        -------
+        title : java.lang.String
+            The short-title of the image.
+        dims : list
+            A list [x,y,c,z,t] of the size in each dimension of the image. 
+        zFactor : float
+            The ratio of the voxel size in the z-dimension and x-dimension.
+        size : int
+            The size of one channel of the image
+        '''
         dims = list(image.getDimensions())
         size = dims[0]*dims[1]*dims[3]*dims[4]
         cal = image.getCalibration()
@@ -117,13 +136,30 @@ class Bridge:
         return title, dims, zFactor, size
     
     def toHyperstack(self, image, dims):
-        image2 = HyperStackConverter.toHyperStack(image, dims[2], dims[3], dims[4], "Composite");
-        if image2.getID() == image.getID():
+        '''
+        Convert image to a hyperstack with the dimensions dims. The number of
+        voxels must be equal to the product of the elements of dims. 
+
+        Parameters
+        ----------
+        image : ij.ImagePlus
+            The image that will be converted to a hyperstack.
+        dims : list
+            A list [x,y,c,z,t] of the size in each dimension of the image. 
+
+        Returns
+        -------
+        hyperstack : ij.ImagePlus
+            The hyperstack into which the input image has been converted.
+        '''
+        hyperstack = HyperStackConverter.toHyperStack(image, dims[2], dims[3], dims[4], "Composite");
+        if hyperstack.getID() == image.getID():
             image.hide()
             image.show()
         else:
             image.close()
-            image2.show()
+            hyperstack.show()
+        return hyperstack
             
     def screenshot(self):
         screenshot = self.viewer.screenshot(canvas_only=True)
