@@ -119,7 +119,7 @@ def test_getLabelsFromIJ(Viewer):
     expected = np.array([[[[255, 0, 128], [0, 64, 32]]]])
     comparison = actual == expected
     assert(comparison.all())
-    assert(isinstance(actual[0][0][0][0][0], np.int64))
+    assert(isinstance(actual[0][0][0][0][0], np.int_))
     
     # The name should be short title of the ij-image
     assert(viewer.add_labels.call_args[1]['name']=='blobs')
