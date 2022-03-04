@@ -50,10 +50,10 @@ class Bridge:
         for c in range(0, dims[2]):
             self.viewer.add_image(pixels.reshape(
                 dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, c, :, :],
-                name="C" + str(c + 1) + "-" + str(title),
-                colormap=self.colors[c],
-                blending='additive',
-                scale=[zFactor, 1, 1])
+                name = "C" + str(c + 1) + "-" + str(title),
+                colormap = self.colors[c],
+                blending = 'additive',
+                scale = [zFactor, 1, 1])
         self.viewer.dims.ndisplay = 3
 
     def getLabelsFromIJ(self):
@@ -98,7 +98,7 @@ class Bridge:
         dim = stackDims[3]
         if stackDims[2] == 1 and stackDims[3] == 1 and stackDims[4] > 1:
             dim = dims[4]
-        if size<=2147483647:
+        if size <= 2147483647: #(2^31)-1
                 pixels = np.array(image.getStack().getVoxels(0, 0, 0, stackDims[0], stackDims[1], dim, []))
         else:
                 ia = image.getStack().getImageArray()
@@ -129,7 +129,7 @@ class Bridge:
             The size of one channel of the image
         '''
         dims = list(image.getDimensions())
-        size = dims[0]*dims[1]*dims[3]*dims[4]
+        size = dims[0] * dims[1] * dims[3] * dims[4]
         cal = image.getCalibration()
         zFactor = cal.getZ(1) / cal.getX(1)
         title = image.getShortTitle()
@@ -172,34 +172,37 @@ class Bridge:
         ip = ImagePlus("screenshot of " + title, image)
         ip.show()
 
-    def displayPoints(self,tableTitle="Results",inColormap='inferno'):
+    def displayPoints(self,tableTitle="Results", inColormap='inferno'):
         results = ResultsTable.getResultsTable(tableTitle)
         cal = IJ.getImage().getCalibration()
         headings = list(results.getColumnHeadings().split("\t"))[1:]
-        confidenceHeaders = ["V","Confidence","Z"]
+        confidenceHeaders = ["V", "Confidence", "Z"]
         confidenceHeaderID = len(confidenceHeaders)
         data = {}
         for i in range(0, len(headings)):
             if(headings[i] in confidenceHeaders):
-                confidenceHeaderID = min(confidenceHeaders.index(headings[i]),confidenceHeaderID)
+                confidenceHeaderID = min(confidenceHeaders.index(headings[i]), confidenceHeaderID)
             data[headings[i]] = results.getColumn(i)
         results = pd.DataFrame(data=data)
 
-        coords = [[z, y, x] for [x,y,z] in results.iloc[:,0:3].to_numpy()]
+        coords = [[z, y, x] for [x, y, z] in results.iloc[:,0:3].to_numpy()]
         zFactor = cal.getZ(1) / cal.getX(1)
 
 
         qualities = results[confidenceHeaders[confidenceHeaderID]].values / 255
         properties = {'confidence' : qualities}
         colormap = self.cropColormap(inColormap)
-        points_layer = self.viewer.add_points(coords, properties=properties,name=tableTitle,
-                                                  face_color='confidence',
-                                                  face_colormap=colormap,
-                                                  face_contrast_limits=(0.0,1.0),
-                                                  size=3, scale=[zFactor, 1, 1])
+        points_layer = self.viewer.add_points(coords,
+                                                properties=properties,
+                                                name=tableTitle,
+                                                face_color='confidence',
+                                                face_colormap=colormap,
+                                                face_contrast_limits=(0.0, 1.0),
+                                                size=3,
+                                                scale=[zFactor, 1, 1])
 
 
-    def getPairs(self,tableTitle="Results"):
+    def getPairs(self, tableTitle="Results"):
         results = ResultsTable.getResultsTable(tableTitle)
         cal = IJ.getImage().getCalibration()
         headings = list(results.getColumnHeadings().split("\t"))[1:]
@@ -209,7 +212,7 @@ class Bridge:
         results = pd.DataFrame(data=data)
         zFactor = cal.getZ(1) / cal.getX(1)
         
-        coordsA = [[z, y, x] for [x,y,z] in np.delete(results.values,[3,4,5,6], axis=1)]
+        coordsA = [[z, y, x] for [x, y, z] in np.delete(results.values, [3,4,5,6], axis=1)]
         # 
         # qualities = results['Dist'].values / 255
         # properties = {'confidence' : qualities}
@@ -220,7 +223,7 @@ class Bridge:
         #                                           face_contrast_limits=(0.0,1.0),
         #                                           size=3, scale=[zFactor, 1, 1])
 
-        coordsB = [[z, y, x] for [x,y,z] in np.delete(results.values,[0,1,2,6], axis=1)]
+        coordsB = [[z, y, x] for [x, y, z] in np.delete(results.values, [0,1,2,6], axis=1)]
         #
         # qualities = results['Dist'].values / 255
         # properties = {'confidence' : qualities}
@@ -232,23 +235,25 @@ class Bridge:
         #                                           size=3, scale=[zFactor, 1, 1])
         lines = []
         for i in range(len(coordsA)):
-            lines.append([coordsA[i],coordsB[i]])
-        self.viewer.add_shapes(lines,name=tableTitle, shape_type='line', scale=[zFactor, 1, 1])
+            lines.append([coordsA[i], coordsB[i]])
+        self.viewer.add_shapes(lines, name=tableTitle, shape_type='line', scale=[zFactor, 1, 1])
 
-    def cropColormap(self,colorMapName):
+    def cropColormap(self, colorMapName):
         #Get colorMap values
         cm = get_colormap(colorMapName)
         for i in range(256):
-            cm.colors.rgba[i]=cm.colors.rgba[int(i/2)+128]
-            if i==0:
-                cm.colors.rgba[0]=[0.0,0.0,0.0,1.0]
+            cm.colors.rgba[i] = cm.colors.rgba[int(i/2) + 128]
+            if i == 0:
+                cm.colors.rgba[0] = [0.0, 0.0, 0.0, 1.0]
         return convert_vispy_colormap(cm, name=colorMapName)
 
     def pointsToIJ(self, points):
-        sel = [(coords, v) for coords,v in zip(points.data, points.properties['confidence']) if v>0]
-        rw = WindowManager.getWindow("Results")
-        if rw:
-            rw.close(False)
+        tableTitle = self.viewer.layers.selection.active.name
+        print(tableTitle)
+        sel = [(coords, v) for coords, v in zip(points.data, points.properties['confidence']) if v > 0]
+        resultsWindow = WindowManager.getWindow(tableTitle)
+        if resultsWindow:
+            resultsWindow.close(False)
         counter = 0;
         rt = ResultsTable(JObject(JInt(len(sel))));
         for row in sel:
@@ -257,9 +262,9 @@ class Bridge:
             rt.setValue("Z", counter, row[0][0])
             rt.setValue("V", counter, row[1]*255)
             counter = counter + 1
-        rt.show("Results")
+        rt.show(tableTitle)
 
-    def saveAllLayers(self,directoryName):
+    def saveAllLayers(self, directoryName):
         savePath = directoryName
         layerList = self.viewer.layers
 
@@ -282,7 +287,7 @@ class Bridge:
                 filename = name + ".csv"
                 colormap = currentLayer.face_colormap.name
 
-            layersArray.append({'name':name,'filename':filename,'type':type_,'colormap':colormap})
+            layersArray.append({'name':name, 'filename':filename, 'type':type_, 'colormap':colormap})
             
         layersPart = {'layers':layersArray}
         
@@ -290,7 +295,7 @@ class Bridge:
         print(type(scale[1]))
         zFactor = float(scale[1])
 
-        calibrationPart = {'calibration':{'x':1,'y':1,'z':zFactor}}
+        calibrationPart = {'calibration':{'x':1, 'y':1, 'z':zFactor}}
         #configDict = [{calibrationPart},{layersPart}]
         #configDict = calibrationPart+layersPart
         with open(join(savePath, "config.yml"), 'w+') as file:
@@ -299,7 +304,7 @@ class Bridge:
 
         layerList.save(savePath)
 
-    def loadAllLayers(self,directoryName):
+    def loadAllLayers(self, directoryName):
         colorID = 0
 
         currentDirectory = str(directoryName).replace("\\", "/").replace("//", "/")
@@ -312,8 +317,8 @@ class Bridge:
         with open(configFile, 'r') as file:
             configs = yaml.load(file, Loader=yaml.FullLoader)
             #Calibration:
-            x=configs['calibration']['x']
-            z=configs['calibration']['z']
+            x = configs['calibration']['x']
+            z = configs['calibration']['z']
             zFactor = z / x
             for parameter in configs['layers']:
                 name = parameter['name']
@@ -321,13 +326,13 @@ class Bridge:
                 type = parameter['type']
                 colormap =parameter['colormap']
                 if(type == 'image'):
-                    self.viewer.open(join(currentDirectory, filename),layer_type=type,name=name,colormap=colormap,scale=[zFactor, 1, 1],blending='additive')
+                    self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, colormap=colormap, scale=[zFactor, 1, 1], blending='additive')
                 if(type == 'points'):
                     pointsCsv = pd.read_csv(join(currentDirectory, filename))
                     qualities = pointsCsv['confidence'].values
                     properties = {'confidence' : qualities}
                     croppedColormap = self.cropColormap(colormap)
-                    self.viewer.open(join(currentDirectory, filename),layer_type=type,name=name,face_colormap=croppedColormap,scale=[zFactor, 1, 1],size=3,properties=properties,face_color='confidence',face_contrast_limits=(0.0,1.0))
+                    self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, face_colormap=croppedColormap, scale=[zFactor, 1, 1], size=3, properties=properties, face_color='confidence', face_contrast_limits=(0.0, 1.0))
                 if(type == 'shapes'):
-                    self.viewer.open(join(currentDirectory, filename),layer_type=type,name=name,face_colormap=colormap,scale=[zFactor, 1, 1])
+                    self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, face_colormap=colormap, scale=[zFactor, 1, 1])
 
