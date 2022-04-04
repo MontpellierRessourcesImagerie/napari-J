@@ -137,9 +137,9 @@ class Points(QWidget):
         self.changeColormap()
 
     def _on_click_getLines(self):
-        self.checkBridge()
+        self.getBridge()
         print("Fetching pairs from IJ")
-        self.bridge.getPairs()
+        self.bridge.getPairs(self.fieldTableName.text())
 
     
     def changeValueMin(self, value):

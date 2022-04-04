@@ -212,7 +212,10 @@ class Bridge:
         results = pd.DataFrame(data=data)
         zFactor = cal.getZ(1) / cal.getX(1)
         
-        coordsA = [[z, y, x] for [x, y, z] in np.delete(results.values, [3,4,5,6], axis=1)]
+
+
+        coordsA = [[z, y, x] for [x, y, z] in zip(data[headings[0]],data[headings[1]],data[headings[2]])]
+        #coordsA = [[z, y, x] for [x, y, z] in np.delete(results.values, [3,4,5,6], axis=1)]
         # 
         # qualities = results['Dist'].values / 255
         # properties = {'confidence' : qualities}
@@ -223,7 +226,8 @@ class Bridge:
         #                                           face_contrast_limits=(0.0,1.0),
         #                                           size=3, scale=[zFactor, 1, 1])
 
-        coordsB = [[z, y, x] for [x, y, z] in np.delete(results.values, [0,1,2,6], axis=1)]
+        coordsB = [[z, y, x] for [x, y, z] in zip(data[headings[3]],data[headings[4]],data[headings[5]])]
+        #coordsB = [[z, y, x] for [x, y, z] in np.delete(results.values, [0,1,2,6], axis=1)]
         #
         # qualities = results['Dist'].values / 255
         # properties = {'confidence' : qualities}
@@ -279,14 +283,18 @@ class Bridge:
                 type_ = 'image'
                 filename = name + ".tif"
                 colormap = currentLayer.colormap.name
-            else:
-                if(type_.find('points')>-1):
-                    type_ = 'points'
-                else:
-                    type_ = 'shapes'
+            elif(type_.find('points')>-1):
+                type_ = 'points'
                 filename = name + ".csv"
                 colormap = currentLayer.face_colormap.name
-
+            elif(type_.find('shapes')>-1):
+                type_ = 'shapes'
+                filename = name + ".csv"
+                colormap = currentLayer.face_colormap.name
+            else:
+                print(name + " : This Layer Type may be unsupported !!")
+                filename = name + ".layer"
+                colormap = ""
             layersArray.append({'name':name, 'filename':filename, 'type':type_, 'colormap':colormap})
             
         layersPart = {'layers':layersArray}
@@ -327,12 +335,15 @@ class Bridge:
                 colormap =parameter['colormap']
                 if(type == 'image'):
                     self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, colormap=colormap, scale=[zFactor, 1, 1], blending='additive')
-                if(type == 'points'):
+                elif(type == 'points'):
                     pointsCsv = pd.read_csv(join(currentDirectory, filename))
                     qualities = pointsCsv['confidence'].values
                     properties = {'confidence' : qualities}
                     croppedColormap = self.cropColormap(colormap)
                     self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, face_colormap=croppedColormap, scale=[zFactor, 1, 1], size=3, properties=properties, face_color='confidence', face_contrast_limits=(0.0, 1.0))
-                if(type == 'shapes'):
+                elif(type == 'shapes'):
                     self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, face_colormap=colormap, scale=[zFactor, 1, 1])
+                else:
+                    print(filename + " : This Layer Type may be unsupported !!")
+                    self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, scale=[zFactor, 1, 1])
 
