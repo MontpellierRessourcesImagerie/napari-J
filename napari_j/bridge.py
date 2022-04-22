@@ -175,28 +175,31 @@ class Bridge:
     def displayPoints(self,tableTitle="Results", inColormap='inferno'):
         results = ResultsTable.getResultsTable(tableTitle)
         cal = IJ.getImage().getCalibration()
-        headings = list(results.getColumnHeadings().split("\t"))[1:]
-        confidenceHeaders = ["V", "Confidence", "Z"]
+        headings = list(results.getColumnHeadings().split("\t"))[0:]
+        confidenceHeaders = ["V", "Confidence"]
         confidenceHeaderID = len(confidenceHeaders)
+        confidenceID = len(headings)
         data = {}
         for i in range(0, len(headings)):
             if(headings[i] in confidenceHeaders):
                 confidenceHeaderID = min(confidenceHeaders.index(headings[i]), confidenceHeaderID)
+                confidenceID = min(confidenceID,i)
             data[headings[i]] = results.getColumn(i)
-        results = pd.DataFrame(data=data)
+        resultsDF = pd.DataFrame(data=data)
 
-        coords = [[z, y, x] for [x, y, z] in results.iloc[:,0:3].to_numpy()]
+        coords = [[z, y, x] for [x, y, z] in resultsDF.iloc[:,0:3].to_numpy()]
         zFactor = cal.getZ(1) / cal.getX(1)
 
+        qualities = resultsDF[confidenceHeaders[confidenceHeaderID]].to_numpy(copy=True)
+        print("qualities type: "+str(type(qualities)))
+        print(qualities)
 
-        qualities = results[confidenceHeaders[confidenceHeaderID]].values / 255
         properties = {'confidence' : qualities}
-        colormap = self.cropColormap(inColormap)
         points_layer = self.viewer.add_points(coords,
                                                 properties=properties,
                                                 name=tableTitle,
                                                 face_color='confidence',
-                                                face_colormap=colormap,
+                                                face_colormap=inColormap,
                                                 face_contrast_limits=(0.0, 1.0),
                                                 size=3,
                                                 scale=[zFactor, 1, 1])
@@ -212,44 +215,13 @@ class Bridge:
         results = pd.DataFrame(data=data)
         zFactor = cal.getZ(1) / cal.getX(1)
         
-
-
         coordsA = [[z, y, x] for [x, y, z] in zip(data[headings[0]],data[headings[1]],data[headings[2]])]
-        #coordsA = [[z, y, x] for [x, y, z] in np.delete(results.values, [3,4,5,6], axis=1)]
-        # 
-        # qualities = results['Dist'].values / 255
-        # properties = {'confidence' : qualities}
-        # colormap = self.cropColormap('inferno')
-        # points_layer = self.viewer.add_points(coordsA,  properties=properties,
-        #                                           face_color='confidence',
-        #                                           face_colormap=colormap,
-        #                                           face_contrast_limits=(0.0,1.0),
-        #                                           size=3, scale=[zFactor, 1, 1])
-
         coordsB = [[z, y, x] for [x, y, z] in zip(data[headings[3]],data[headings[4]],data[headings[5]])]
-        #coordsB = [[z, y, x] for [x, y, z] in np.delete(results.values, [0,1,2,6], axis=1)]
-        #
-        # qualities = results['Dist'].values / 255
-        # properties = {'confidence' : qualities}
-        # colormap = self.cropColormap('viridis')
-        # points_layer = self.viewer.add_points(coordsB,  properties=properties,
-        #                                           face_color='confidence',
-        #                                           face_colormap=colormap,
-        #                                           face_contrast_limits=(0.0,1.0),
-        #                                           size=3, scale=[zFactor, 1, 1])
+        
         lines = []
         for i in range(len(coordsA)):
             lines.append([coordsA[i], coordsB[i]])
         self.viewer.add_shapes(lines, name=tableTitle, shape_type='line', scale=[zFactor, 1, 1])
-
-    def cropColormap(self, colorMapName):
-        #Get colorMap values
-        cm = get_colormap(colorMapName)
-        for i in range(256):
-            cm.colors.rgba[i] = cm.colors.rgba[int(i/2) + 128]
-            if i == 0:
-                cm.colors.rgba[0] = [0.0, 0.0, 0.0, 1.0]
-        return convert_vispy_colormap(cm, name=colorMapName)
 
     def pointsToIJ(self, points):
         tableTitle = self.viewer.layers.selection.active.name
@@ -264,7 +236,7 @@ class Bridge:
             rt.setValue("X", counter, row[0][2])
             rt.setValue("Y", counter, row[0][1])
             rt.setValue("Z", counter, row[0][0])
-            rt.setValue("V", counter, row[1]*255)
+            rt.setValue("V", counter, row[1])
             counter = counter + 1
         rt.show(tableTitle)
 
@@ -339,11 +311,9 @@ class Bridge:
                     pointsCsv = pd.read_csv(join(currentDirectory, filename))
                     qualities = pointsCsv['confidence'].values
                     properties = {'confidence' : qualities}
-                    croppedColormap = self.cropColormap(colormap)
-                    self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, face_colormap=croppedColormap, scale=[zFactor, 1, 1], size=3, properties=properties, face_color='confidence', face_contrast_limits=(0.0, 1.0))
+                    self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, face_colormap=colorMap, scale=[zFactor, 1, 1], size=3, properties=properties, face_color='confidence', face_contrast_limits=(0.0, 1.0))
                 elif(type == 'shapes'):
                     self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, face_colormap=colormap, scale=[zFactor, 1, 1])
                 else:
                     print(filename + " : This Layer Type may be unsupported !!")
                     self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, scale=[zFactor, 1, 1])
-

@@ -86,7 +86,7 @@ class Connection(QWidget):
                 yaml.dump(self.config, file)   
         
     def readConfig(self):
-        with self.configDir.joinpath('./naparij.yml').open() as file:
+        with self.configDir.joinpath('naparij.yml').open() as file:
             params = yaml.load(file, Loader=yaml.FullLoader)
         self.config = params
         connectionParams = params['connection']
@@ -129,15 +129,10 @@ class Connection(QWidget):
     	self.jvmPathInput.setText(aPath)
     	self.config['connection']['jvm_path'] = aPath
 
-    def activateAutostartFIJI(self):
-        self.autostartFIJI = True
-        self.autostartCB.setChecked(True)
-        self.config['connection']['autostart_fiji'] = True
-
-    def deactivateAutostartFIJI(self):
-        self.autostartFIJI = False
-        self.autostartCB.setChecked(False)
-        self.config['connection']['autostart_fiji'] = False
+    def setAutostartFIJI(self, aBool):
+        self.autostartFIJI = aBool
+        self.autostartCB.setChecked(aBool)
+        self.config['connection']['autostart_fiji'] = aBool
 
     def _on_save_settings_click(self):
         self.saveSettings()
@@ -148,10 +143,8 @@ class Connection(QWidget):
         jvmPath = self.jvmPathInput.text()
         self.setJVMPath(jvmPath)
         autostart = self.autostartCB.isChecked()
-        if autostart:
-            self.activateAutostartFIJI()
-        else:
-            self.deactivateAutostartFIJI()
+        self.setAutostartFIJI(autostart)
+
         with self.configDir.joinpath("naparij.yml").open(mode='w') as file:
             yaml.dump(self.config, file)
         self.showMessage("Settings saved...", "The settings have been saved.")
