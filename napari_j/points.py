@@ -167,6 +167,7 @@ class Points(QWidget):
         self.canvas.draw()
 
     def _on_click_get_points(self):
+        #print(str(self.fieldTableName.text()))
         self.selectedPoints, self.confidence = self.getPoints(self.fieldTableName.text())
         self.points[id(self.selectedPoints)] = self.selectedPoints, self.confidence
         self.drawHistogram()
@@ -217,7 +218,7 @@ class Points(QWidget):
         tMin = self.thresholdMin
         tMax = self.thresholdMax
         self.thresholdMin = 0
-        self.thresholdMax = 99999
+        self.thresholdMax = _MAXIMUM_HISTOGRAM+1
         self.histogramMin = min(self.confidence)
         self.histogramMax = max(self.confidence)
         self.thresholdMin = tMin
@@ -248,7 +249,7 @@ class Points(QWidget):
         
     def setOutsidePointsBlack(self,points):
         p = points.properties['confidence']
-        print(str(p))
+        #print(str(p))
         print("Bounds = ["+str(self.thresholdMin)+"; "+str(self.thresholdMax)+"]")
         for i in range(0, len(p)):
             if self.confidence[i]>self.thresholdMax or self.confidence[i]<self.thresholdMin:
@@ -288,8 +289,12 @@ class Points(QWidget):
 
     def getSelectedLayer(self):
         points = self.viewer.layers.selection.active
-        print(type(points))
-        print(str(type(points)))
-        if str(type(points))=="<class 'napari.layers.points.points.Points'>":
-            return points
-        return None
+        #print("Type of the active Layer Proxy :" + str(type(points)))
+        if str(type(points)) != "<class 'napari.utils._proxies.PublicOnlyProxy'>":
+            return None
+
+        #print("Type of the active Layer :" + str(type(points.__wrapped__)))
+        if str(type(points.__wrapped__)) != "<class 'napari.layers.points.points.Points'>":
+            return None
+        
+        return points
