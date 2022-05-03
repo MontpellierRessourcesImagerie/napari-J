@@ -19,7 +19,7 @@ Known problems:
 
 * Crashes on linux  when the file-dialog is opened. Workaround: Set the option ``Use JFileChooser to open/save`` from the ``Edit>Options>Input/Output`` menu.
 * 03.05.2022 - For now please use it with napari 0.4.12, there is a vispy bug in 0.4.15 concerning labelled masks
-* 03.05.2022 - Currently you need to have the range of the quality values for point between 0 and 1, in the new version they can have any range, but we are waiting for the bug in napari 0.4.15 to be fixed to release this. 
+* 03.05.2022 - Currently you need to have the range of the quality values for point between 0 and 255, in the new version they can have any range, but we are waiting for the bug in napari 0.4.15 to be fixed to release this. 
 
 ----------------------------------
 
