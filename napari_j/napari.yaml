@@ -12,9 +12,9 @@ contributions:
     title: Create Points
     python_name: napari_j._dock_widget:Points
   widgets:
-  - command: napari-J.Connection
+  - command: napari_j.Connection
     display_name: Connection
-  - command: napari-J.Image
+  - command: napari_j.Image
     display_name: Image
-  - command: napari-J.Points
+  - command: napari_j.Points
     display_name: Points
