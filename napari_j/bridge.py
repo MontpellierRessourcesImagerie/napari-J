@@ -46,14 +46,15 @@ class Bridge:
         '''
         for c in range(0, len(self.viewer.layers)):
             self.viewer.layers.pop(0)
-        title, dims, zFactor, pixels = self.getPixelsFromImageJ()
+        title, dims, voxelSize, unit, pixels = self.getPixelsFromImageJ()
         for c in range(0, dims[2]):
             self.viewer.add_image(pixels.reshape(
                 dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, c, :, :],
                 name = "C" + str(c + 1) + "-" + str(title),
                 colormap = self.colors[c],
                 blending = 'additive',
-                scale = [zFactor, 1, 1])
+                scale = voxelSize)
+        self.viewer.scale_bar.unit = unit
         self.viewer.dims.ndisplay = 3
 
     def getLabelsFromIJ(self):
@@ -64,11 +65,12 @@ class Bridge:
         -------
         None.
         '''
-        title, dims, zFactor, pixels = self.getPixelsFromImageJ()
+        title, dims, voxelSize, unit, pixels = self.getPixelsFromImageJ()
         self.viewer.add_labels(pixels.reshape(
             dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, 0, :, :].astype(int), 
             name=str(title), 
-            scale=[zFactor, 1, 1])
+            scale=voxelSize)
+        self.viewer.scale_bar.unit = unit
     	
     def getPixelsFromImageJ(self):
         '''
@@ -85,13 +87,15 @@ class Bridge:
             The title of the image.
         dims : list
             A list [x,y,c,z,t] of the size in each dimension of the image.
-        zFactor : float
-            The ratio of the voxel size in the z-dimension and x-dimension.
+        voxelSize : list
+            A list of the voxel sizes in the order z, y, x.
+        unit : string
+            The unit string, for example nm, micrometer or cm.
         pixels : numpy.ndarray
             The pixel data of the active image in ImageJ as a linear list.
         '''
         image = IJ.getImage()
-        title, dims, zFactor, size = self.getMetadataFromImage(image)
+        title, dims, voxelSize, unit, size = self.getMetadataFromImage(image)
         isHyperStack = image.isHyperStack()
         HyperStackConverter.toStack(image)
         stackDims = list(image.getDimensions())
@@ -106,7 +110,7 @@ class Bridge:
                 pixels = np.array(ia)
         if isHyperStack:
             self.toHyperstack(image, dims)
-        return title, dims, zFactor, pixels
+        return title, dims, voxelSize, unit, pixels
     
     def getMetadataFromImage(self, image):
         '''
@@ -123,17 +127,20 @@ class Bridge:
             The short-title of the image.
         dims : list
             A list [x,y,c,z,t] of the size in each dimension of the image. 
-        zFactor : float
-            The ratio of the voxel size in the z-dimension and x-dimension.
+        voxelSize : list
+            A list of the voxel sizes in the order z, y, x.
+        unit : string
+            The unit string, for example nm, micrometer or cm.
         size : int
             The size of one channel of the image
         '''
         dims = list(image.getDimensions())
         size = dims[0] * dims[1] * dims[3] * dims[4]
         cal = image.getCalibration()
-        zFactor = cal.getZ(1) / cal.getX(1)
+        voxelSize = [cal.getZ(1), cal.getY(1), cal.getX(1)]
+        unit = str(cal.getUnit())
         title = image.getShortTitle()
-        return title, dims, zFactor, size
+        return title, dims, voxelSize, unit, size
     
     def toHyperstack(self, image, dims):
         '''
@@ -317,3 +324,4 @@ class Bridge:
                 else:
                     print(filename + " : This Layer Type may be unsupported !!")
                     self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, scale=[zFactor, 1, 1])
+                    

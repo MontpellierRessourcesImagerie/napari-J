@@ -1,0 +1,20 @@
+name: napari-J
+schema_version: 0.1.0
+contributions:
+  commands:
+  - id: napari-J.Connection
+    title: Create Connection
+    python_name: napari_j._dock_widget:Connection
+  - id: napari-J.Image
+    title: Create Image
+    python_name: napari_j._dock_widget:Image
+  - id: napari-J.Points
+    title: Create Points
+    python_name: napari_j._dock_widget:Points
+  widgets:
+  - command: napari-J.Connection
+    display_name: Connection
+  - command: napari-J.Image
+    display_name: Image
+  - command: napari-J.Points
+    display_name: Points

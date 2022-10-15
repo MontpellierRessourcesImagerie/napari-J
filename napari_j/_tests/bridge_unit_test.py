@@ -25,7 +25,10 @@ def getImage():
     stackMock.getVoxels.return_value = [255.0, 0.0 ,128.0, 0.0, 64.0, 32.0]
     imageMock.getStack.return_value = stackMock
     calibrationMock = MagicMock()
+    calibrationMock.getX.return_value = 1
+    calibrationMock.getY.return_value = 1
     calibrationMock.getZ.return_value = 2.5
+    calibrationMock.getUnit.return_value = "micrometer"
     calibrationMock.getX.return_value = 1
     imageMock.getCalibration.return_value = calibrationMock
     return imageMock
@@ -145,7 +148,7 @@ def test_getPixelsFromImageJ(Viewer):
         from ..bridge import Bridge
     viewer = napari.Viewer()
     bridge = Bridge(viewer)
-    title, dims, zFactor, pixels = bridge.getPixelsFromImageJ()
+    title, dims, voxelSizes, unit, pixels = bridge.getPixelsFromImageJ()
 
     # The title should be the short-title of the image in ImageJ
     assert(title=='blobs')
@@ -158,7 +161,7 @@ def test_getPixelsFromImageJ(Viewer):
 
     # The z-scale should have been calculated as the ratio of the z-step and
     # the x-pixel size.
-    assert(zFactor==2.5)     
+    assert(voxelSizes[0]==2.5)     
     
     # The pixel data is returned as a linear list with the order of dimensions
     # given by dim, i.e. xyczt.
@@ -182,7 +185,7 @@ def test_getMetadataFromImage(Viewer):
     viewer = napari.Viewer()
     bridge = Bridge(viewer)
     image = getImage()
-    title, dims, zFactor, size = bridge.getMetadataFromImage(image)
+    title, dims, voxelSizes, unit, size = bridge.getMetadataFromImage(image)
 
     # The title should be the short-title of the image in ImageJ
     assert(title=='blobs')
@@ -195,7 +198,7 @@ def test_getMetadataFromImage(Viewer):
 
     # The z-scale should have been calculated as the ratio of the z-step and
     # the x-pixel size.
-    assert(zFactor==2.5)
+    assert(voxelSizes[0]==2.5)
 
     # The size of one channel of the image is the product of the sizes of the
     # remaining dimensions (without c)
@@ -218,7 +221,7 @@ def test_toHyperstack(Viewer):
     viewer = napari.Viewer()
     bridge = Bridge(viewer)
     image = getImage()
-    title, dims, zFactor, size = bridge.getMetadataFromImage(image)
+    title, dims, voxelSizes, unit, size = bridge.getMetadataFromImage(image)
     bridge.toHyperstack(image, dims)
     
     # If the converted image has a different id from the input image, the
