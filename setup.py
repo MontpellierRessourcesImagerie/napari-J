@@ -36,5 +36,6 @@ setup(
      install_requires=[
         'JPype1>=1.2.1',
         'matplotlib',
+	'imageio_ffmpeg',
     ],
 )
