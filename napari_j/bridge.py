@@ -110,6 +110,12 @@ class Bridge:
                 pixels = np.array(ia)
         if isHyperStack:
             self.toHyperstack(image, dims)
+        bitDepth = image.getBitDepth();
+        if bitDepth == 8:
+            pixels = pixels.astype(np.uint8)
+        if bitDepth == 16:
+            pixels = pixels.astype(np.uint16)
+            
         return title, dims, voxelSize, unit, pixels
     
     def getMetadataFromImage(self, image):
