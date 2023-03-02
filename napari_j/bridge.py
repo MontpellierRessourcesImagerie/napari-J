@@ -47,9 +47,15 @@ class Bridge:
         for c in range(0, len(self.viewer.layers)):
             self.viewer.layers.pop(0)
         title, dims, voxelSize, unit, pixels = self.getPixelsFromImageJ()
+        if dims[3]==1:
+            voxelSize = (voxelSize[1], voxelSize[2])
         for c in range(0, dims[2]):
-            self.viewer.add_image(pixels.reshape(
-                dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, c, :, :],
+            data = pixels.reshape(
+                    dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, c, :, :]
+            while data.shape[0] == 1:
+                data = np.squeeze(data, axis=0)    
+            self.viewer.add_image(
+                data, 
                 name = "C" + str(c + 1) + "-" + str(title),
                 colormap = self.colors[c],
                 blending = 'additive',
@@ -66,10 +72,13 @@ class Bridge:
         None.
         '''
         title, dims, voxelSize, unit, pixels = self.getPixelsFromImageJ()
-        self.viewer.add_labels(pixels.reshape(
-            dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, 0, :, :].astype(int), 
-            name=str(title), 
-            scale=voxelSize)
+        if dims[3]==1:
+            voxelSize = (voxelSize[1], voxelSize[2])
+        data = pixels.reshape(
+            dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, 0, :, :].astype(int)
+        while data.shape[0] == 1:
+            data = np.squeeze(data, axis=0)
+        self.viewer.add_labels(data, name=str(title), scale=voxelSize)
         self.viewer.scale_bar.unit = unit
     	
     def getPixelsFromImageJ(self):
