@@ -19,10 +19,10 @@ import numpy as np
 
 def getImage():
     imageMock = MagicMock()
-    imageMock.getDimensions.return_value = [3, 2, 1, 1, 1]
+    imageMock.getDimensions.return_value = [3, 2, 1, 2, 1]
     imageMock.getShortTitle.return_value = 'blobs'
     stackMock = MagicMock()
-    stackMock.getVoxels.return_value = [255.0, 0.0 ,128.0, 0.0, 64.0, 32.0]
+    stackMock.getVoxels.return_value = [255.0, 0.0 ,128.0, 0.0, 64.0, 32.0, 255.0, 0.0 ,128.0, 0.0, 64.0, 32.0]
     imageMock.getStack.return_value = stackMock
     calibrationMock = MagicMock()
     calibrationMock.getX.return_value = 1
@@ -119,10 +119,10 @@ def test_getLabelsFromIJ(Viewer):
 
     # The image data should be of type int, independent from the image type in ij.
     actual = viewer.add_labels.call_args[0]
-    expected = np.array([[[[255, 0, 128], [0, 64, 32]]]])
+    expected = np.array([[[[255.0, 0.0, 128.0], [0.0, 64.0, 32.0]]]])
     comparison = actual == expected
     assert(comparison.all())
-    assert(isinstance(actual[0][0][0][0][0], np.int_))
+    assert(isinstance(actual[0][0][0][0], np.int_))
     
     # The name should be short title of the ij-image
     assert(viewer.add_labels.call_args[1]['name']=='blobs')
@@ -155,7 +155,7 @@ def test_getPixelsFromImageJ(Viewer):
 
     # The test image has a width of 3 pixels, a height of 2 pixels, one channel,
     # one z-slice and one time-frame.
-    expected = [3, 2, 1, 1, 1]
+    expected = [3, 2, 1, 2, 1]
     comparison = np.array(dims) == np.array(expected)
     assert(comparison.all())
 
@@ -165,7 +165,7 @@ def test_getPixelsFromImageJ(Viewer):
     
     # The pixel data is returned as a linear list with the order of dimensions
     # given by dim, i.e. xyczt.
-    expected = np.array([255.0, 0.0, 128.0, 0.0, 64.0, 32.0])
+    expected = np.array([255.0, 0.0, 128.0, 0.0, 64.0, 32.0, 255.0, 0.0, 128.0, 0.0, 64.0, 32.0])
     comparison = pixels == expected
     assert(comparison.all())
 
@@ -192,7 +192,7 @@ def test_getMetadataFromImage(Viewer):
 
     # The test image has a width of 3 pixels, a height of 2 pixels, one channel,
     # one z-slice and one time-frame.
-    expected = [3, 2, 1, 1, 1]
+    expected = [3, 2, 1, 2, 1]
     comparison = np.array(dims) == np.array(expected)
     assert(comparison.all())
 
@@ -203,7 +203,7 @@ def test_getMetadataFromImage(Viewer):
     # The size of one channel of the image is the product of the sizes of the
     # remaining dimensions (without c)
     assert(size==dims[0]*dims[1]*dims[3]*dims[4])
-    assert(size==6)
+    assert(size==12)
     
 @patch('napari.Viewer')
 @surrogate('ij.measure.ResultsTable')
