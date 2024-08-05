@@ -1,6 +1,7 @@
 import os
 import napari
 from qtpy.QtWidgets import QWidget, QPushButton, QGridLayout, QFileDialog, QLineEdit, QLabel
+from .config import Config
 from magicgui import magic_factory
 
 
@@ -13,16 +14,19 @@ class Image(QWidget):
     savePath = None
     saveInput = None
 
-    
     def __init__(self, napari_viewer):
         super().__init__()
         self.viewer = napari_viewer
+        config = Config()
         btnNewViewer = QPushButton("New viewer")
         btnNewViewer.clicked.connect(self._on_click_new_viewer)
         btnGetImage = QPushButton("Get Image")
         btnGetImage.clicked.connect(self._on_click_get_image)
         btnGetLabels = QPushButton("Get Labels")
         btnGetLabels.clicked.connect(self._on_click_get_labels)
+        if config.isLimeSegInstalled():
+            btnGetSurfaces = QPushButton("Get Surfaces")
+            btnGetSurfaces.clicked.connect(self._on_click_get_surfaces)
         btnScreenshot = QPushButton("Screenshot")
         btnScreenshot.clicked.connect(self._on_click_screenshot)
 
@@ -48,17 +52,18 @@ class Image(QWidget):
         self.layout().addWidget(btnNewViewer    , 1, 1, 1, -1)
         self.layout().addWidget(btnGetImage     , 2, 1, 1, -1)
         self.layout().addWidget(btnGetLabels    , 3, 1, 1, -1)
-        self.layout().addWidget(btnScreenshot   , 4, 1, 1, -1)
+        self.layout().addWidget(btnGetSurfaces  , 4, 1, 1, -1)
+        self.layout().addWidget(btnScreenshot   , 5, 1, 1, -1)
 
-        self.layout().addWidget(loadLabel       , 5, 1, 1, 2)
-        self.layout().addWidget(self.loadInput  , 6, 1)
-        self.layout().addWidget(btnBrowseload   , 6, 2)
-        self.layout().addWidget(btnLoad         , 7, 1, 1, 2)
+        self.layout().addWidget(loadLabel       , 6, 1, 1, 2)
+        self.layout().addWidget(self.loadInput  , 7, 1)
+        self.layout().addWidget(btnBrowseload   , 7, 2)
+        self.layout().addWidget(btnLoad         , 8, 1, 1, 2)
 
-        self.layout().addWidget(saveLabel       , 8, 1, 1, 2)
-        self.layout().addWidget(self.saveInput  , 9, 1)
-        self.layout().addWidget(btnBrowseSave   , 9, 2)
-        self.layout().addWidget(btnSave         , 10, 1, 1, 2)
+        self.layout().addWidget(saveLabel       , 9, 1, 1, 2)
+        self.layout().addWidget(self.saveInput  , 10, 1)
+        self.layout().addWidget(btnBrowseSave   , 10, 2)
+        self.layout().addWidget(btnSave         , 11, 1, 1, 2)
 
 
     def _on_click_browse_load(self):
@@ -77,13 +82,16 @@ class Image(QWidget):
         self.openNewViewer()
     	
     def _on_click_get_image(self):
-    	self.getImage()
+        self.getImage()
 
     def _on_click_get_labels(self):
         self.getLabels()
-        
+
+    def _on_click_get_surfaces(self):
+        self.getSurfaces()
+
     def _on_click_screenshot(self):
-    	self.screenshot()
+        self.screenshot()
 
     def _on_click_load(self):
         self.loadFromFolders()
@@ -107,7 +115,11 @@ class Image(QWidget):
     def getLabels(self):
         print("Fetching the active labels image from IJ")
         self.getBridge().getLabelsFromIJ()	 
-    
+
+    def getSurfaces(self):
+        print("Fetching the surfaces from IJ")
+        self.getBridge().getSurfacesFromIJ()
+
     def screenshot(self):
         print("Sending screenshot to IJ")
         self.getBridge().screenshot()	 

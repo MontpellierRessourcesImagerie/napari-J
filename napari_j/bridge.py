@@ -12,16 +12,17 @@ from ij.plugin import HyperStackConverter
 from napari.utils.colormaps import * 
 from napari.utils.colormaps.colormap_utils import * 
 from vispy.color import Colormap, get_colormap
+from .config import Config
 
 
 class Bridge:
-    '''
+    """
         The Bridge allows napari to communicate with ImageJ.
-    '''
+    """
     colors = ['magenta', 'cyan', 'yellow', 'red', 'green', 'blue', 'orange', 'brown', 'white']
 
     def __init__(self, viewer):
-        '''
+        """
         The constructor creates a new Bridge-object. 
 
         Parameters
@@ -32,18 +33,18 @@ class Bridge:
         Returns
         -------
         None.
-        '''
+        """
         self.viewer = viewer
 
     def getActiveImageFromIJ(self):
-        '''
+        """
         Removes all layers from the viewer. Gets the active image from ImageJ
         and add it's channels as image-layers to the viewer.
         
         Returns
         -------
         None.
-        '''
+        """
         for c in range(0, len(self.viewer.layers)):
             self.viewer.layers.pop(0)
         title, dims, voxelSize, unit, pixels = self.getPixelsFromImageJ()
@@ -64,15 +65,15 @@ class Bridge:
         self.viewer.dims.ndisplay = 3
 
     def getLabelsFromIJ(self):
-        '''
+        """
         Adds the active image in ImageJ as a new labels-layer to the viewer.
 
         Returns
         -------
         None.
-        '''
+        """
         title, dims, voxelSize, unit, pixels = self.getPixelsFromImageJ()
-        if dims[3]==1:
+        if dims[3] == 1:
             voxelSize = (voxelSize[1], voxelSize[2])
         data = pixels.reshape(
             dims[4], dims[3], dims[2], dims[1], dims[0])[:, :, 0, :, :].astype(int)
@@ -80,9 +81,24 @@ class Bridge:
             data = np.squeeze(data, axis=0)
         self.viewer.add_labels(data, name=str(title), scale=voxelSize)
         self.viewer.scale_bar.unit = unit
-    	
+
+    def getSurfacesFromIJ(self):
+        from eu.kiaru.limeseg import LimeSeg
+        from eu.kiaru.limeseg.struct import Cell
+        vertices = np.array([])
+        norms = np.array([])
+        for c in LimeSeg.allCells:
+            LimeSeg.currentCell = c
+            for dot in c.dots:
+                vector = np.array([dot.pos.z, dot.pos.y, dot.pos.x])
+                np.append(vertices, vector)
+                normVector = np.array([dot.Norm.z, dot.Norm.y, dot.Norm.x])
+                np.append(norms, normVector)
+        print(vertices)
+        print(norms)
+
     def getPixelsFromImageJ(self):
-        '''
+        """
         Get the title, dimensions, zFactor and pixel data from the active 
         image in ImageJ. The pixel data is returned as a linear list. Use
         
@@ -102,7 +118,7 @@ class Bridge:
             The unit string, for example nm, micrometer or cm.
         pixels : numpy.ndarray
             The pixel data of the active image in ImageJ as a linear list.
-        '''
+        """
         image = IJ.getImage()
         title, dims, voxelSize, unit, size = self.getMetadataFromImage(image)
         isHyperStack = image.isHyperStack()
@@ -128,7 +144,7 @@ class Bridge:
         return title, dims, voxelSize, unit, pixels
     
     def getMetadataFromImage(self, image):
-        '''
+        """
         Get the metadata from the ImageJ image.
 
         Parameters
@@ -148,7 +164,7 @@ class Bridge:
             The unit string, for example nm, micrometer or cm.
         size : int
             The size of one channel of the image
-        '''
+        """
         dims = list(image.getDimensions())
         size = dims[0] * dims[1] * dims[3] * dims[4]
         cal = image.getCalibration()
@@ -158,7 +174,7 @@ class Bridge:
         return title, dims, voxelSize, unit, size
     
     def toHyperstack(self, image, dims):
-        '''
+        """
         Convert image to a hyperstack with the dimensions dims. The number of
         voxels must be equal to the product of the elements of dims. 
 
@@ -173,7 +189,7 @@ class Bridge:
         -------
         hyperstack : ij.ImagePlus
             The hyperstack into which the input image has been converted.
-        '''
+        """
         hyperstack = HyperStackConverter.toHyperStack(image, dims[2], dims[3], dims[4], "Composite");
         if hyperstack.getID() == image.getID():
             image.hide()
@@ -333,7 +349,7 @@ class Bridge:
                     pointsCsv = pd.read_csv(join(currentDirectory, filename))
                     qualities = pointsCsv['confidence'].values
                     properties = {'confidence' : qualities}
-                    self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, face_colormap=colorMap, scale=[zFactor, 1, 1], size=3, properties=properties, face_color='confidence', face_contrast_limits=(0.0, 1.0))
+                    self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, face_colormap=colormap, scale=[zFactor, 1, 1], size=3, properties=properties, face_color='confidence', face_contrast_limits=(0.0, 1.0))
                 elif(type == 'shapes'):
                     self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, face_colormap=colormap, scale=[zFactor, 1, 1])
                 else:
