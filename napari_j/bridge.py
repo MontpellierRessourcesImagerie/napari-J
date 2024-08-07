@@ -1,5 +1,6 @@
 import yaml
 import pandas as pd
+# import pymeshlab
 from os import listdir
 from os.path import isfile, join
 from jpype import *
@@ -86,16 +87,31 @@ class Bridge:
         from eu.kiaru.limeseg import LimeSeg
         from eu.kiaru.limeseg.struct import Cell
         vertices = np.array([])
-        norms = np.array([])
+        meshes = np.array([])
+        zScale = LimeSeg.opt.getOptParam("ZScale")
         for c in LimeSeg.allCells:
             LimeSeg.currentCell = c
-            for dot in c.dots:
-                vector = np.array([dot.pos.z, dot.pos.y, dot.pos.x])
-                np.append(vertices, vector)
-                normVector = np.array([dot.Norm.z, dot.Norm.y, dot.Norm.x])
-                np.append(norms, normVector)
-        print(vertices)
-        print(norms)
+            ct = c.getCellTAt(1)
+            for dot in ct.dots:
+                vector = np.array([dot.pos.z / zScale, dot.pos.y, dot.pos.x])
+                if vertices.size == 0:
+                    vertices = np.array(vector)
+                else:
+                    vertices = np.vstack((vertices, vector))
+            for triangle in ct.triangles:
+                indices = np.array([triangle.id1, triangle.id2, triangle.id3])
+                if meshes.size == 0:
+                    meshes = np.array(indices)
+                else:
+                    meshes = np.vstack((meshes, indices))
+            scale = [1, 1, 1]
+            if len(self.viewer.layers) > 0:
+                scale = self.viewer.layers[0].scale
+            name = "cell " + str(c.id_Cell)
+            surface = self.viewer.add_surface((vertices, meshes), name=name)
+            surface.scale = scale
+
+
 
     def getPixelsFromImageJ(self):
         """
@@ -202,7 +218,9 @@ class Bridge:
     def screenshot(self):
         screenshot = self.viewer.screenshot(canvas_only=True)
         pixels = JInt[:](list(screenshot[:, :, 0:3].flatten()))
-        image = java.awt.image.BufferedImage(screenshot.shape[1], screenshot.shape[0], java.awt.image.BufferedImage.TYPE_3BYTE_BGR)
+        image = java.awt.image.BufferedImage(screenshot.shape[1],
+                                             screenshot.shape[0],
+                                             java.awt.image.BufferedImage.TYPE_3BYTE_BGR)
         image.getRaster().setPixels(0,0,screenshot.shape[1], screenshot.shape[0], pixels)
         title = self.viewer.layers[0].name
         if 'C1-' in title:
@@ -344,15 +362,34 @@ class Bridge:
                 type = parameter['type']
                 colormap =parameter['colormap']
                 if(type == 'image'):
-                    self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, colormap=colormap, scale=[zFactor, 1, 1], blending='additive')
+                    self.viewer.open(join(currentDirectory, filename),
+                                     layer_type=type,
+                                     name=name,
+                                     colormap=colormap,
+                                     scale=[zFactor, 1, 1],
+                                     blending='additive')
                 elif(type == 'points'):
                     pointsCsv = pd.read_csv(join(currentDirectory, filename))
                     qualities = pointsCsv['confidence'].values
                     properties = {'confidence' : qualities}
-                    self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, face_colormap=colormap, scale=[zFactor, 1, 1], size=3, properties=properties, face_color='confidence', face_contrast_limits=(0.0, 1.0))
+                    self.viewer.open(join(currentDirectory, filename),
+                                     layer_type=type,
+                                     name=name,
+                                     face_colormap=colormap,
+                                     scale=[zFactor, 1, 1],
+                                     size=3, properties=properties,
+                                     face_color='confidence',
+                                     face_contrast_limits=(0.0, 1.0))
                 elif(type == 'shapes'):
-                    self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, face_colormap=colormap, scale=[zFactor, 1, 1])
+                    self.viewer.open(join(currentDirectory, filename),
+                                     layer_type=type,
+                                     name=name,
+                                     face_colormap=colormap,
+                                     scale=[zFactor, 1, 1])
                 else:
                     print(filename + " : This Layer Type may be unsupported !!")
-                    self.viewer.open(join(currentDirectory, filename), layer_type=type, name=name, scale=[zFactor, 1, 1])
+                    self.viewer.open(join(currentDirectory, filename),
+                                     layer_type=type,
+                                     name=name,
+                                     scale=[zFactor, 1, 1])
                     
